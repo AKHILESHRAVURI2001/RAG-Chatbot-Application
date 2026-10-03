@@ -1,0 +1,106 @@
+{
+  "widget": {
+    "companyName": "",
+    "adminPrimaryColor": "#6d28d9",
+    "primaryColor": "#4f46e5",
+    "title": "Chat with us",
+    "description": "",
+    "note": "",
+    "enabled": true,
+    "unavailableMessage": "We're currently unavailable. Please check back soon.",
+    "icon": "💬",
+    "iconSvg": "",
+    "quickReplies": [],
+    "proactiveEnabled": false,
+    "proactiveDelaySeconds": 8,
+    "proactiveMessage": "Looking for a property? Ask me anything!",
+    "poweredByText": "",
+    "requireLogin": false,
+    "allowPublicSignup": true,
+    "loginPromptTitle": "Sign up or Log in to continue",
+    "loginPromptMessage": "Please create an account or sign in to ask questions and receive instant AI answers.",
+    "signupUrl": "/signup",
+    "loginUrl": "/login",
+    "freeQuestionsBeforeAuth": 0,
+    "position": "bottom-right"
+  },
+  "prompt": {
+    "systemPrompt": "You are a helpful customer support assistant. Answer the user's questions based on the provided context.",
+    "greeting": "Hi! How can I help you today?",
+    "noContextMessage": "I do not have that information. Please rephrase your question or check the website directly.",
+    "chunkFallbackIntroMessage": "**You may find related information below:**\nWe found some information related to your question. Please check the following content:",
+    "showRelatedArticles": false
+  },
+  "businessHours": {
+    "enabled": false,
+    "timezone": "Europe/London",
+    "days": [1, 2, 3, 4, 5],
+    "openTime": "09:00",
+    "closeTime": "18:00",
+    "closedMessage": "We're currently closed. Our hours are Mon-Fri, 9am-6pm. Please leave a message and we'll get back to you."
+  },
+  "limits": {
+    "enabled": true,
+    "sessionMessageLimit": 20,
+    "sessionMessageWindowHours": 24,
+    "burstLimitPerMinute": 6,
+    "autoBlockMinutes": 30,
+    "customLimitMessage": "You've reached the message limit. Please wait a moment before asking again."
+  },
+  "voice": {
+    "enabled": false,
+    "provider": "sarvam",
+    "languageCode": "en-IN",
+    "speaker": "shubh",
+    "systemPrompt": "",
+    "noContextMessage": "",
+    "overrideTuning": false,
+    "temperature": 0.3,
+    "maxTokens": 600,
+    "topP": 1,
+    "frequencyPenalty": 0,
+    "presencePenalty": 0,
+    "historyLimit": 10,
+    "maxContextChars": 6000,
+    "maxHistoryCharsPerTurn": 600,
+    "rewriteFollowUpQueries": true,
+    "autoCompactHistoryWords": 800,
+    "autoCompactContextWords": 0
+  },
+  "cache": {
+    "contextThreshold": 0.3
+  },
+  "llm": {
+    "llmEnabled": true,
+    "rewriteFollowUpQueries": true,
+    "maxContextChars": 6000,
+    "maxHistoryCharsPerTurn": 600,
+    "autoCompactHistoryWords": 800,
+    "autoCompactContextWords": 0,
+    "customBaseUrl": "",
+    "showChunkFallbackWhenLlmUnavailable": true,
+    "showChunkFallbackWhenLlmEnabled": false,
+    "chunkFallbackMinSimilarity": 0.48,
+    "chunkFallbackMaxResults": 3,
+    "autoStoreQuestionChunks": false,
+    "enableQuestionChunksMatching": true,
+    "enableFaqs": true,
+    "enableDocumentSearch": true,
+    "enableUnansweredQuestionsLogging": true,
+    "enableRestrictedWords": true
+  },
+  "chunking": {
+    "embeddingProvider": "local",
+    "embeddingModel": "text-embedding-3-small"
+  },
+  "firebase": {
+    "enabled": false,
+    "serviceAccountJson": ""
+  },
+  "systemPrompts": {
+    "queryRewrite": "You rewrite a follow-up user message into a single standalone search query for a knowledge-base lookup.\nRules:\n1. Resolve all references (\"it\", \"that\", \"this\", \"they\", \"there\", \"tell me\", \"know\", \"more\", \"explain\", etc.) using the conversation history so the search query makes complete sense on its own.\n2. If the user asks for details or an overview following up on what the assistant offered (e.g., \"then tell me know\", \"tell me more\", \"what do you offer\"), formulate a search query targeting those specific topics or company information.\n3. Output ONLY the rewritten search query — no quotes, no explanation, no preamble.\n4. Keep it short, factual, and search-optimized.\n5. If the message is already self-contained, output it unchanged.",
+    "noAnswerToken": "§NO_ANSWER§",
+    "historyCompaction": "You compress the earlier part of a customer-support chat into a brief recap, so it can stand in for those messages later in the same conversation.\nRules:\n1. Keep every fact the visitor gave (names, numbers, dates, budgets, locations, preferences) and every commitment or answer already given to them.\n2. Keep what they are ultimately trying to do, so a later follow-up still makes sense.\n3. Drop pleasantries, repetition and phrasing. Write compact third-person notes, not dialogue.\n4. Output ONLY the recap — no preamble, no heading, no commentary.",
+    "contextCompaction": "You compress retrieved reference material into a denser summary that will be used as context to answer a question.\nRules:\n1. Never drop a concrete fact — every number, price, date, name, policy detail, requirement, or step must survive.\n2. Remove only repetition, filler wording, and formatting/navigation overhead (menus, headings that add no information, boilerplate).\n3. Do not answer any question or add information that isn't in the material.\n4. Output ONLY the compressed material — no preamble, no heading, no commentary."
+  }
+}

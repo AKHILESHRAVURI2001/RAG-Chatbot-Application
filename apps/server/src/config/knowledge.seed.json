@@ -1,0 +1,21 @@
+{
+  "_comment": "Optional starter FAQs. Run `npm run seed -w apps/server` once to load these into the `faqs` table (embeddings are generated automatically). After that, manage FAQs from the Admin Panel — this file is only a convenient bulk-import source, not read at request time.",
+  "faqs": [
+    {
+      "question": "What are your business hours?",
+      "answer": "We're available Monday to Friday, 9am–6pm. Outside these hours you can still leave a message and we'll reply the next business day."
+    },
+    {
+      "question": "How do I contact support?",
+      "answer": "You can reach our support team through this chat, or email support@example.com and we'll get back to you within one business day."
+    },
+    {
+      "question": "Do you offer refunds?",
+      "answer": "Yes — we offer a full refund within 14 days of purchase if you're not satisfied. Contact support with your order number to start a refund."
+    },
+    {
+      "question": "Where are you located?",
+      "answer": "We're a remote-first company; please check the Contact page on our website for regional office details."
+    }
+  ]
+}
