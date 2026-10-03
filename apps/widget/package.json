@@ -1,0 +1,14 @@
+{
+  "name": "@minichatbot/widget",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "vite --port 5175",
+    "build": "vite build"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-basic-ssl": "^1.2.0",
+    "typescript": "^5.5.4",
+    "vite": "^5.4.5"
+  }
+}

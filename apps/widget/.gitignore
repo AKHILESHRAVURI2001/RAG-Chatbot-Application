@@ -1,0 +1,9 @@
+node_modules/
+package-lock.json
+dist/
+.env
+.env.local
+.env.*.local
+*.log
+.vercel
+*.tsbuildinfo

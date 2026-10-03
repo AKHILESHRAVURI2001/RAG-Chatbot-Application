@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Widget dev preview</title>
+  </head>
+  <body style="font-family: system-ui, sans-serif; max-width: 640px; margin: 60px auto; padding: 0 20px; color: #1e293b;">
+    <h1>Widget dev preview</h1>
+    <p>
+      This page is dev-only — it's not part of the built <code>dist/widget.js</code> bundle. It exists so editing
+      anything under <code>src/</code> hot-reloads instantly here, without running <code>npm run build</code> first.
+    </p>
+    <p>
+      It normally would read its config from a <code>&lt;script data-api="..."&gt;</code> tag, the same way a real
+      embed does — but that trick (<code>document.currentScript</code>) doesn't work for ES modules, which is what
+      Vite's dev server needs to serve live <code>.ts</code> source. So this page wires the controller directly
+      instead, with the same effect.
+    </p>
+    <p>Make sure <code>apps/server</code> is running first (<code>npm run dev:server</code>), then just edit any file under <code>src/</code> and save.</p>
+
+    <script type="module">
+      import { ChatWidgetController } from '/src/core/chatWidgetController.ts';
+
+      const controller = new ChatWidgetController({
+        apiBase: `${window.location.origin}/api`,
+      });
+      void controller.initialize();
+    </script>
+  </body>
+</html>
