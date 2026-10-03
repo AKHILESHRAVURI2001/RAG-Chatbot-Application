@@ -1,0 +1,24 @@
+{
+  "name": "minichatbotagent",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Self-hosted single-website chatbot agent with admin panel, vector search (pgvector), multi-provider LLM support and Redis/semantic caching.",
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev:server": "npm run dev -w apps/server",
+    "dev:admin": "npm run dev -w apps/admin",
+    "dev:widget": "npm run dev -w apps/widget",
+    "build": "npm run build -w apps/server && npm run build -w apps/admin && npm run build -w apps/widget",
+    "build:server": "npm run build -w apps/server",
+    "build:admin": "npm run build -w apps/admin",
+    "build:widget": "npm run build -w apps/widget",
+    "start:server": "npm run start -w apps/server",
+    "db:migrate": "npm run migrate -w apps/server",
+    "test": "npm run test -w apps/server"
+  },
+  "engines": {
+    "node": ">=18.18.0"
+  }
+}

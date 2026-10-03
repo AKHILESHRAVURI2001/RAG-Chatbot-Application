@@ -1,0 +1,81 @@
+# Runs the whole stack locally in containers — the same containers ECS/EKS
+# run in production, just on your own machine. Good for testing a Docker
+# build before shipping it, or for local dev without installing Postgres/
+# Redis/Node directly on your machine at all.
+#
+#   docker compose up --build
+#
+# Then: admin at http://localhost:8080, widget at http://localhost:8081/widget.js,
+# API at http://localhost:4000/api.
+#
+# FOR LOCAL DEVELOPMENT ONLY. The database password below is a throwaway example and
+# the ports are bound to this machine only (127.0.0.1). Don't expose this file's setup
+# to the internet as it is, and don't reuse the password.
+#
+# See docs/hostingsupport/awshosting/pipeline/README.md for how this same set
+# of images gets built and shipped to AWS (ECS/EKS) instead of run locally.
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16 # Postgres 16 with the pgvector extension pre-installed
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: minichatbot
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - mcb_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  server:
+    build:
+      context: .
+      dockerfile: apps/server/Dockerfile
+    ports:
+      - "4000:4000"
+    environment:
+      PORT: 4000
+      NODE_ENV: development
+      ALLOWED_ORIGINS: "*"
+      ADMIN_ORIGINS: "*"
+      DATABASE_URL: postgres://postgres:password@postgres:5432/minichatbot
+      DATABASE_SSL: "false"
+      ADMIN_JWT_SECRET: local-dev-secret-change-me-32chars
+      REDIS_URL: redis://redis:6379
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  admin:
+    build:
+      context: .
+      dockerfile: apps/admin/Dockerfile
+      args:
+        VITE_API_BASE_URL: http://localhost:4000/api
+    ports:
+      - "8080:80"
+    depends_on:
+      - server
+
+  widget:
+    build:
+      context: .
+      dockerfile: apps/widget/Dockerfile
+    ports:
+      - "8081:80"
+
+volumes:
+  mcb_postgres_data:
