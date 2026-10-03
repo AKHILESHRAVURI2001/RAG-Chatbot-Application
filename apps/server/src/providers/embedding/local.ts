@@ -9,6 +9,8 @@ async function getPipeline() {
     pipelinePromise = (async () => {
       const { pipeline, env: xenv } = await import('@xenova/transformers');
       xenv.allowRemoteModels = true;
+      // In a container the default cache folder is read-only; let the image point at a writable one.
+      if (process.env.TRANSFORMERS_CACHE) xenv.cacheDir = process.env.TRANSFORMERS_CACHE;
       return pipeline('feature-extraction', env.EMBEDDING_MODEL, { quantized: true });
     })();
   }
