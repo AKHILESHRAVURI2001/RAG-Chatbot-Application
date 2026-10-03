@@ -1,0 +1,7 @@
+# A Namespace is just a labeled folder inside the cluster — everything for
+# this app lives inside it, keeping it separate from anything else that
+# might later run on the same EKS cluster.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: minichatbot

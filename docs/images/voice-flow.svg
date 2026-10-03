@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="964" viewBox="0 0 800 964" role="img" aria-label="How the voice agent works">
+<defs><marker id="a" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#94a3b8"/></marker><marker id="g" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#16a34a"/></marker><filter id="s" x="-5%" y="-5%" width="110%" height="120%"><feDropShadow dx="0" dy="1" stdDeviation="2" flood-color="#0f172a" flood-opacity="0.10"/></filter></defs>
+<rect width="800" height="964" rx="14" fill="#f8fafc"/>
+<text x="400.0" y="34" text-anchor="middle" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="17" font-weight="700" fill="#0f172a">How the voice agent works</text>
+<rect x="40" y="52" width="12" height="12" rx="3" fill="#16a34a"/>
+<text x="58" y="63" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" fill="#475569">Widget (visitor’s browser)</text>
+<rect x="246.4" y="52" width="12" height="12" rx="3" fill="#0f172a"/>
+<text x="264.4" y="63" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" fill="#475569">Server</text>
+<rect x="324.8" y="52" width="12" height="12" rx="3" fill="#a855f7"/>
+<text x="342.8" y="63" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" fill="#475569">Speech service</text>
+<rect x="454.40000000000003" y="52" width="12" height="12" rx="3" fill="#2563eb"/>
+<text x="472.40000000000003" y="63" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" fill="#475569">Answer pipeline</text>
+<g filter="url(#s)"><rect x="40" y="96" width="470" height="62" rx="12" fill="#fff" stroke="#e2e8f0"/></g>
+<rect x="40" y="96" width="8" height="62" rx="4" fill="#16a34a"/>
+<text x="66" y="122" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="15.5" font-weight="700" fill="#16a34a">1. Visitor taps the microphone</text>
+<text x="66" y="143" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="13" fill="#475569">The browser asks for microphone permission</text>
+<line x1="275.0" y1="160" x2="275.0" y2="184" stroke="#94a3b8" stroke-width="2" marker-end="url(#a)"/>
+<g filter="url(#s)"><rect x="40" y="188" width="470" height="62" rx="12" fill="#fff" stroke="#e2e8f0"/></g>
+<rect x="40" y="188" width="8" height="62" rx="4" fill="#16a34a"/>
+<text x="66" y="214" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="15.5" font-weight="700" fill="#16a34a">2. Widget listens</text>
+<text x="66" y="235" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="13" fill="#475569">Live captions and a moving ring show it hears you</text>
+<line x1="275.0" y1="252" x2="275.0" y2="276" stroke="#94a3b8" stroke-width="2" marker-end="url(#a)"/>
+<g filter="url(#s)"><rect x="40" y="280" width="470" height="62" rx="12" fill="#fff" stroke="#e2e8f0"/></g>
+<rect x="40" y="280" width="8" height="62" rx="4" fill="#16a34a"/>
+<text x="66" y="306" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="15.5" font-weight="700" fill="#16a34a">3. Stops listening</text>
+<text x="66" y="327" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="13" fill="#475569">When you go quiet for a moment, or you tap “Stop speaking &amp; send”</text>
+<line x1="275.0" y1="344" x2="275.0" y2="368" stroke="#94a3b8" stroke-width="2" marker-end="url(#a)"/>
+<g filter="url(#s)"><rect x="40" y="372" width="470" height="62" rx="12" fill="#fff" stroke="#e2e8f0"/></g>
+<rect x="40" y="372" width="8" height="62" rx="4" fill="#0f172a"/>
+<text x="66" y="398" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="15.5" font-weight="700" fill="#0f172a">4. Server checks</text>
+<text x="66" y="419" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="13" fill="#475569">Voice switched on? Chat open? Speech provider has a key?</text>
+<line x1="275.0" y1="436" x2="275.0" y2="460" stroke="#94a3b8" stroke-width="2" marker-end="url(#a)"/>
+<g filter="url(#s)"><rect x="40" y="464" width="470" height="62" rx="12" fill="#fff" stroke="#e2e8f0"/></g>
+<rect x="40" y="464" width="8" height="62" rx="4" fill="#a855f7"/>
+<text x="66" y="490" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="15.5" font-weight="700" fill="#a855f7">5. Speech → text (speech service)</text>
+<text x="66" y="511" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="13" fill="#475569">Sarvam AI or OpenAI turns the recording into words</text>
+<line x1="275.0" y1="528" x2="275.0" y2="552" stroke="#94a3b8" stroke-width="2" marker-end="url(#a)"/>
+<g filter="url(#s)"><rect x="40" y="556" width="470" height="62" rx="12" fill="#fff" stroke="#e2e8f0"/></g>
+<rect x="40" y="556" width="8" height="62" rx="4" fill="#2563eb"/>
+<text x="66" y="582" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="15.5" font-weight="700" fill="#2563eb">6. The answer is written (chat AI)</text>
+<text x="66" y="603" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="13" fill="#475569">FAQs, caches, your content, then the chat AI writes the answer</text>
+<line x1="275.0" y1="620" x2="275.0" y2="644" stroke="#94a3b8" stroke-width="2" marker-end="url(#a)"/>
+<g filter="url(#s)"><rect x="40" y="648" width="470" height="62" rx="12" fill="#fff" stroke="#e2e8f0"/></g>
+<rect x="40" y="648" width="8" height="62" rx="4" fill="#a855f7"/>
+<text x="66" y="674" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="15.5" font-weight="700" fill="#a855f7">7. Text → speech (speech service)</text>
+<text x="66" y="695" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="13" fill="#475569">Sarvam AI or OpenAI turns the answer into a spoken voice</text>
+<line x1="275.0" y1="712" x2="275.0" y2="736" stroke="#94a3b8" stroke-width="2" marker-end="url(#a)"/>
+<g filter="url(#s)"><rect x="40" y="740" width="470" height="62" rx="12" fill="#fff" stroke="#e2e8f0"/></g>
+<rect x="40" y="740" width="8" height="62" rx="4" fill="#16a34a"/>
+<text x="66" y="766" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="15.5" font-weight="700" fill="#16a34a">8. Widget shows and speaks it</text>
+<text x="66" y="787" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="13" fill="#475569">Your words and the answer appear in the chat, then the voice plays</text>
+<line x1="275.0" y1="804" x2="275.0" y2="828" stroke="#94a3b8" stroke-width="2" marker-end="url(#a)"/>
+<g filter="url(#s)"><rect x="40" y="832" width="470" height="62" rx="12" fill="#fff" stroke="#e2e8f0"/></g>
+<rect x="40" y="832" width="8" height="62" rx="4" fill="#16a34a"/>
+<text x="66" y="858" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="15.5" font-weight="700" fill="#16a34a">9. Keeps listening</text>
+<text x="66" y="879" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="13" fill="#475569">Speak over it to interrupt, or tap Back to end the conversation</text>
+<rect x="540" y="90.5" width="190" height="73" rx="10" fill="#dc26261a" stroke="#dc2626"/>
+<text x="635.0" y="112.5" text-anchor="middle" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="600" fill="#dc2626">No microphone?</text>
+<text x="635.0" y="129.5" text-anchor="middle" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="600" fill="#dc2626">Shows how to</text>
+<text x="635.0" y="146.5" text-anchor="middle" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="600" fill="#dc2626">allow it</text>
+<line x1="514" y1="127.0" x2="534" y2="127.0" stroke="#dc2626" stroke-width="2" marker-end="url(#a)"/>
+<rect x="540" y="366.5" width="190" height="73" rx="10" fill="#dc26261a" stroke="#dc2626"/>
+<text x="635.0" y="388.5" text-anchor="middle" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="600" fill="#dc2626">Not ready?</text>
+<text x="635.0" y="405.5" text-anchor="middle" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="600" fill="#dc2626">A clear message</text>
+<text x="635.0" y="422.5" text-anchor="middle" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="600" fill="#dc2626">is shown</text>
+<line x1="514" y1="403.0" x2="534" y2="403.0" stroke="#dc2626" stroke-width="2" marker-end="url(#a)"/>
+<rect x="540" y="458.5" width="190" height="73" rx="10" fill="#d977061a" stroke="#d97706"/>
+<text x="635.0" y="480.5" text-anchor="middle" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="600" fill="#d97706">No words heard?</text>
+<text x="635.0" y="497.5" text-anchor="middle" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="600" fill="#d97706">“Please try</text>
+<text x="635.0" y="514.5" text-anchor="middle" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="600" fill="#d97706">speaking again”</text>
+<line x1="514" y1="495.0" x2="534" y2="495.0" stroke="#d97706" stroke-width="2" marker-end="url(#a)"/>
+<rect x="540" y="642.5" width="190" height="73" rx="10" fill="#d977061a" stroke="#d97706"/>
+<text x="635.0" y="664.5" text-anchor="middle" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="600" fill="#d97706">If speech fails,</text>
+<text x="635.0" y="681.5" text-anchor="middle" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="600" fill="#d97706">you still get the</text>
+<text x="635.0" y="698.5" text-anchor="middle" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="600" fill="#d97706">text answer</text>
+<line x1="514" y1="679.0" x2="534" y2="679.0" stroke="#d97706" stroke-width="2" marker-end="url(#a)"/>
+<path d="M512 863.0 H758 V219.0 H518" fill="none" stroke="#16a34a" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#g)"/>
+<text x="774" y="541.0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#16a34a" transform="rotate(90 774 541.0)" text-anchor="middle">hands-free: back to step 2</text>
+<text x="400.0" y="940" text-anchor="middle" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" fill="#64748b">Everything about voice is set in the admin panel under Voice Agent (provider, language, speaker, prompt).</text>
+</svg>

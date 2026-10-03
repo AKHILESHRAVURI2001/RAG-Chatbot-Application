@@ -1,0 +1,35 @@
+# The admin dashboard: a plain static site (nginx serving the built React
+# app), so no env vars, secrets, or health-check logic beyond "is nginx up."
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mcb-admin
+  namespace: minichatbot
+spec:
+  replicas: 2
+  selector:
+    matchLabels: { app: mcb-admin }
+  template:
+    metadata:
+      labels: { app: mcb-admin }
+    spec:
+      containers:
+        - name: mcb-admin
+          image: ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/mcb-admin:latest
+          ports:
+            - containerPort: 80
+          resources:
+            requests: { cpu: "50m", memory: "64Mi" }
+            limits: { cpu: "200m", memory: "128Mi" }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mcb-admin
+  namespace: minichatbot
+spec:
+  selector: { app: mcb-admin }
+  ports:
+    - port: 80
+      targetPort: 80

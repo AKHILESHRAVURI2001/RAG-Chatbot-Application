@@ -1,0 +1,11 @@
+# Copy this file to terraform.tfvars (which is git-ignored — see .gitignore)
+# and fill in real values. terraform.tfvars is never committed, because it
+# will contain real API keys.
+
+aws_region   = "us-east-1"
+project_name = "mcb"
+
+gemini_api_key = "paste-your-real-gemini-key-here"
+sarvam_api_key = "" # leave blank if not using voice yet
+
+admin_email = "admin@minichatbot.local"

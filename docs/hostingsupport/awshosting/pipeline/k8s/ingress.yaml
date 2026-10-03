@@ -1,0 +1,33 @@
+# An Ingress is Kubernetes's "front door" — the equivalent of the ALB +
+# CloudFront path routing in the EC2 path. This specific one requires the
+# "AWS Load Balancer Controller" to be installed in the cluster first (see
+# eks.md step 4) — that controller is what turns this YAML into an actual
+# running ALB, the same kind of load balancer used everywhere else in
+# this repo.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: mcb-ingress
+  namespace: minichatbot
+  annotations:
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/healthcheck-path: /api/health
+spec:
+  rules:
+    - http:
+        paths:
+          # Order matters: more specific paths first, "/" (catch-all) last.
+          - path: /api
+            pathType: Prefix
+            backend:
+              service: { name: mcb-server, port: { number: 80 } }
+          - path: /widget.js
+            pathType: Exact
+            backend:
+              service: { name: mcb-widget, port: { number: 80 } }
+          - path: /
+            pathType: Prefix
+            backend:
+              service: { name: mcb-admin, port: { number: 80 } }

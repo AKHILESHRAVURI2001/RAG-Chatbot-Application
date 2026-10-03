@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="902" viewBox="0 0 760 902" role="img" aria-label="How a question is answered">
+<defs><marker id="a" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#94a3b8"/></marker><filter id="s" x="-5%" y="-5%" width="110%" height="120%"><feDropShadow dx="0" dy="1" stdDeviation="2" flood-color="#0f172a" flood-opacity="0.10"/></filter></defs>
+<rect width="760" height="902" rx="14" fill="#f8fafc"/>
+<rect x="150" y="22" width="200" height="40" rx="20" fill="#0f172a"/>
+<text x="250" y="47" text-anchor="middle" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="15" font-weight="600" fill="#fff">Visitor asks a question</text>
+<line x1="250" y1="62" x2="250" y2="92" stroke="#94a3b8" stroke-width="2" marker-end="url(#a)"/>
+<g filter="url(#s)"><rect x="40" y="96" width="420" height="64" rx="12" fill="#fff" stroke="#e2e8f0"/></g>
+<rect x="40" y="96" width="8" height="64" rx="4" fill="#dc2626"/>
+<text x="66" y="123" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="16" font-weight="700" fill="#dc2626">1.  Restricted Words</text>
+<text x="66" y="145" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="14" fill="#475569">Is it a blocked word?</text>
+<line x1="464" y1="128.0" x2="514" y2="128.0" stroke="#dc2626" stroke-width="2" marker-end="url(#a)"/>
+<text x="490.0" y="121.0" text-anchor="middle" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#dc2626">yes</text>
+<rect x="520" y="108.0" width="200" height="40" rx="10" fill="#dc26261a" stroke="#dc2626"/>
+<text x="620.0" y="133.0" text-anchor="middle" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="14" font-weight="600" fill="#dc2626">Standard reply</text>
+<line x1="250.0" y1="162" x2="250.0" y2="190" stroke="#94a3b8" stroke-width="2" marker-end="url(#a)"/>
+<text x="260.0" y="181.0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#64748b">no</text>
+<g filter="url(#s)"><rect x="40" y="194" width="420" height="64" rx="12" fill="#fff" stroke="#e2e8f0"/></g>
+<rect x="40" y="194" width="8" height="64" rx="4" fill="#a855f7"/>
+<text x="66" y="221" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="16" font-weight="700" fill="#a855f7">2.  Exact cache</text>
+<text x="66" y="243" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="14" fill="#475569">Same question, word for word, asked before?</text>
+<line x1="464" y1="226.0" x2="514" y2="226.0" stroke="#a855f7" stroke-width="2" marker-end="url(#a)"/>
+<text x="490.0" y="219.0" text-anchor="middle" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#a855f7">yes</text>
+<rect x="520" y="206.0" width="200" height="40" rx="10" fill="#a855f71a" stroke="#a855f7"/>
+<text x="620.0" y="231.0" text-anchor="middle" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="14" font-weight="600" fill="#a855f7">Cached answer</text>
+<line x1="250.0" y1="260" x2="250.0" y2="288" stroke="#94a3b8" stroke-width="2" marker-end="url(#a)"/>
+<text x="260.0" y="279.0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#64748b">no</text>
+<g filter="url(#s)"><rect x="40" y="292" width="420" height="64" rx="12" fill="#fff" stroke="#e2e8f0"/></g>
+<rect x="40" y="292" width="8" height="64" rx="4" fill="#2563eb"/>
+<text x="66" y="319" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="16" font-weight="700" fill="#2563eb">3.  FAQs</text>
+<text x="66" y="341" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="14" fill="#475569">Does it match an FAQ?</text>
+<line x1="464" y1="324.0" x2="514" y2="324.0" stroke="#2563eb" stroke-width="2" marker-end="url(#a)"/>
+<text x="490.0" y="317.0" text-anchor="middle" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#2563eb">yes</text>
+<rect x="520" y="304.0" width="200" height="40" rx="10" fill="#2563eb1a" stroke="#2563eb"/>
+<text x="620.0" y="329.0" text-anchor="middle" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="14" font-weight="600" fill="#2563eb">FAQ answer</text>
+<line x1="250.0" y1="358" x2="250.0" y2="386" stroke="#94a3b8" stroke-width="2" marker-end="url(#a)"/>
+<text x="260.0" y="377.0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#64748b">no</text>
+<g filter="url(#s)"><rect x="40" y="390" width="420" height="64" rx="12" fill="#fff" stroke="#e2e8f0"/></g>
+<rect x="40" y="390" width="8" height="64" rx="4" fill="#0284c7"/>
+<text x="66" y="417" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="16" font-weight="700" fill="#0284c7">4.  Question Chunks</text>
+<text x="66" y="439" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="14" fill="#475569">Does it match a ready-made answer?</text>
+<line x1="464" y1="422.0" x2="514" y2="422.0" stroke="#0284c7" stroke-width="2" marker-end="url(#a)"/>
+<text x="490.0" y="415.0" text-anchor="middle" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#0284c7">yes</text>
+<rect x="520" y="402.0" width="200" height="40" rx="10" fill="#0284c71a" stroke="#0284c7"/>
+<text x="620.0" y="427.0" text-anchor="middle" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="14" font-weight="600" fill="#0284c7">Ready-made answer</text>
+<line x1="250.0" y1="456" x2="250.0" y2="484" stroke="#94a3b8" stroke-width="2" marker-end="url(#a)"/>
+<text x="260.0" y="475.0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#64748b">no</text>
+<g filter="url(#s)"><rect x="40" y="488" width="420" height="64" rx="12" fill="#fff" stroke="#e2e8f0"/></g>
+<rect x="40" y="488" width="8" height="64" rx="4" fill="#a855f7"/>
+<text x="66" y="515" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="16" font-weight="700" fill="#a855f7">5.  Semantic cache</text>
+<text x="66" y="537" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="14" fill="#475569">Same meaning as one answered before?</text>
+<line x1="464" y1="520.0" x2="514" y2="520.0" stroke="#a855f7" stroke-width="2" marker-end="url(#a)"/>
+<text x="490.0" y="513.0" text-anchor="middle" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#a855f7">yes</text>
+<rect x="520" y="500.0" width="200" height="40" rx="10" fill="#a855f71a" stroke="#a855f7"/>
+<text x="620.0" y="525.0" text-anchor="middle" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="14" font-weight="600" fill="#a855f7">Cached answer</text>
+<line x1="250.0" y1="554" x2="250.0" y2="582" stroke="#94a3b8" stroke-width="2" marker-end="url(#a)"/>
+<text x="260.0" y="573.0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#64748b">no</text>
+<g filter="url(#s)"><rect x="40" y="586" width="420" height="64" rx="12" fill="#fff" stroke="#e2e8f0"/></g>
+<rect x="40" y="586" width="8" height="64" rx="4" fill="#16a34a"/>
+<text x="66" y="613" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="16" font-weight="700" fill="#16a34a">6.  Content</text>
+<text x="66" y="635" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="14" fill="#475569">Search your content, then ask the AI</text>
+<line x1="464" y1="618.0" x2="514" y2="618.0" stroke="#16a34a" stroke-width="2" marker-end="url(#a)"/>
+<text x="490.0" y="611.0" text-anchor="middle" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#16a34a">yes</text>
+<rect x="520" y="598.0" width="200" height="40" rx="10" fill="#16a34a1a" stroke="#16a34a"/>
+<text x="620.0" y="623.0" text-anchor="middle" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="14" font-weight="600" fill="#16a34a">AI answer</text>
+<line x1="250.0" y1="652" x2="250.0" y2="680" stroke="#94a3b8" stroke-width="2" marker-end="url(#a)"/>
+<text x="260.0" y="671.0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#64748b">AI fails or is off</text>
+<g filter="url(#s)"><rect x="40" y="684" width="420" height="64" rx="12" fill="#fff" stroke="#e2e8f0"/></g>
+<rect x="40" y="684" width="8" height="64" rx="4" fill="#d97706"/>
+<text x="66" y="711" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="16" font-weight="700" fill="#d97706">7.  Fallbacks</text>
+<text x="66" y="733" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="14" fill="#475569">AI failed or switched off?</text>
+<rect x="520" y="696.0" width="200" height="40" rx="10" fill="#d977061a" stroke="#d97706"/>
+<text x="620.0" y="721.0" text-anchor="middle" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="14" font-weight="600" fill="#d97706">Related content</text>
+<line x1="464" y1="716" x2="514" y2="716" stroke="#d97706" stroke-width="2" marker-end="url(#a)"/>
+<text x="489" y="709" text-anchor="middle" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#d97706">found</text>
+
+<line x1="250.0" y1="750" x2="250.0" y2="778" stroke="#94a3b8" stroke-width="2" marker-end="url(#a)"/>
+<text x="260.0" y="769.0" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" font-weight="600" fill="#64748b">nothing relevant</text>
+<g filter="url(#s)"><rect x="40" y="782" width="420" height="64" rx="12" fill="#fff" stroke="#e2e8f0"/></g>
+<rect x="40" y="782" width="8" height="64" rx="4" fill="#6b7280"/>
+<text x="66" y="809" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="16" font-weight="700" fill="#6b7280">8.  Unanswered Qs</text>
+<text x="66" y="831" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="14" fill="#475569">Nothing relevant found</text>
+<rect x="520" y="784.0" width="200" height="64" rx="10" fill="#6b72801a" stroke="#6b7280"/>
+<text x="620.0" y="806.0" text-anchor="middle" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="13" font-weight="600" fill="#6b7280">“I don’t have that</text>
+<text x="620.0" y="823.0" text-anchor="middle" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="13" font-weight="600" fill="#6b7280">information” + saved</text>
+<text x="620.0" y="840.0" text-anchor="middle" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="13" font-weight="600" fill="#6b7280">for you to answer</text>
+<text x="380.0" y="882" text-anchor="middle" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="12" fill="#64748b">Colored steps match the Knowledge Base menu. The two caches fill up on their own. The first step that can answer wins.</text>
+</svg>

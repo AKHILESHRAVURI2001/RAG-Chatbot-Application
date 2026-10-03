@@ -1,0 +1,11 @@
+# Terraform's own working files — regenerated locally, never committed.
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+
+# Contains real secrets (API keys) once you fill it in from the .example file.
+terraform.tfvars
+*.auto.tfvars

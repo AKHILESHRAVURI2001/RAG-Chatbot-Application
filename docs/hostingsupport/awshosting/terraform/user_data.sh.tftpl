@@ -1,0 +1,66 @@
+#!/bin/bash
+# ============================================================================
+# BOOT SCRIPT — runs automatically the first time a Linux (Amazon Linux 2023)
+# app server starts, whether that's the very first one or one Auto Scaling
+# launches later to replace a crashed instance or handle more traffic.
+# Nobody has to log in and set anything up by hand — this IS the setup.
+# ============================================================================
+set -e
+exec > /var/log/mcb-bootstrap.log 2>&1   # every line below gets logged here for debugging
+
+# Install Node.js 20 explicitly via NodeSource. Do NOT rely on Amazon Linux's
+# own "nodejs20"-style package name — on this OS it has been observed to
+# silently resolve to Node 18, which this app's dependencies don't support
+# (see ../troubleshooting.md).
+dnf install -y jq
+curl -fsSL https://rpm.nodesource.com/setup_20.x | bash -
+dnf install -y nodejs
+node --version
+
+npm install -g pm2   # pm2 keeps the app running and restarts it if it crashes
+
+mkdir -p /opt/mcb && cd /opt/mcb
+
+# Pull down the packaged server code (built + uploaded by `terraform apply`
+# or a later manual redeploy — see ../redeploy.md).
+aws s3 cp s3://${artifact_bucket}/mcb-server-v1.tar.gz /opt/mcb/artifact.tar.gz --region ${region}
+tar xzf artifact.tar.gz
+
+# Fetch this app's secrets (see secrets.tf) — never hardcoded here.
+SECRET=$(aws secretsmanager get-secret-value --secret-id ${app_secret_name} --region ${region} --query SecretString --output text)
+ADMIN_JWT_SECRET=$(echo "$SECRET" | jq -r .ADMIN_JWT_SECRET)
+DB_PASSWORD=$(echo "$SECRET" | jq -r .DB_PASSWORD)
+GEMINI_API_KEY=$(echo "$SECRET" | jq -r .GEMINI_API_KEY)
+SARVAM_API_KEY=$(echo "$SECRET" | jq -r .SARVAM_API_KEY)
+
+# Write the actual .env file the app reads on startup.
+cat > /opt/mcb/.env <<ENVEOF
+PORT=4000
+NODE_ENV=production
+ALLOWED_ORIGINS=*
+ADMIN_ORIGINS=*
+DATABASE_URL=postgresql://mcbadmin:$${DB_PASSWORD}@${rds_endpoint}:5432/minichatbot
+DATABASE_SSL=true
+ADMIN_JWT_SECRET=$${ADMIN_JWT_SECRET}
+ADMIN_JWT_EXPIRES_IN=7d
+REDIS_URL=redis://${redis_endpoint}:6379
+CACHE_TTL_SECONDS=86400
+FAQ_SIMILARITY_THRESHOLD=0.87
+GEMINI_API_KEY=$${GEMINI_API_KEY}
+ANTHROPIC_API_KEY=
+OPENAI_API_KEY=
+EMBEDDING_MODEL=Xenova/all-MiniLM-L6-v2
+FIREBASE_SERVICE_ACCOUNT_JSON=
+SARVAM_API_KEY=$${SARVAM_API_KEY}
+ENVEOF
+
+npm install --omit=dev --prefix /opt/mcb
+
+# Start the app under pm2, and make pm2 itself restart on a machine reboot.
+pm2 delete mcb-server || true
+pm2 start /opt/mcb/dist/index.js --name mcb-server --cwd /opt/mcb
+pm2 save
+pm2 startup systemd -u root --hp /root > /tmp/pm2-startup-out.txt 2>&1 || true
+grep -E '^(sudo )?env ' /tmp/pm2-startup-out.txt | sed 's/^sudo //' | bash || true
+
+echo "Bootstrap complete"

@@ -1,0 +1,36 @@
+# The widget: a single static JS file, served by nginx. Same shape as
+# admin.yaml — one replica is genuinely enough here (it's one small file),
+# but 2 costs almost nothing extra and removes a single point of failure.
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mcb-widget
+  namespace: minichatbot
+spec:
+  replicas: 2
+  selector:
+    matchLabels: { app: mcb-widget }
+  template:
+    metadata:
+      labels: { app: mcb-widget }
+    spec:
+      containers:
+        - name: mcb-widget
+          image: ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/mcb-widget:latest
+          ports:
+            - containerPort: 80
+          resources:
+            requests: { cpu: "25m", memory: "32Mi" }
+            limits: { cpu: "100m", memory: "64Mi" }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mcb-widget
+  namespace: minichatbot
+spec:
+  selector: { app: mcb-widget }
+  ports:
+    - port: 80
+      targetPort: 80

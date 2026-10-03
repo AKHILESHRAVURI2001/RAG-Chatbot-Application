@@ -1,0 +1,88 @@
+# The API server: a Deployment (keeps N copies of the container running),
+# a Service (a stable internal address the copies share), and an
+# HorizontalPodAutoscaler (Kubernetes's equivalent of the ASG's
+# target-tracking scaling policy).
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mcb-server
+  namespace: minichatbot
+spec:
+  replicas: 2 # start with 2 for real redundancy — the HPA below adjusts this under load
+  selector:
+    matchLabels: { app: mcb-server }
+  template:
+    metadata:
+      labels: { app: mcb-server }
+    spec:
+      containers:
+        - name: mcb-server
+          image: ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/mcb-server:latest
+          ports:
+            - containerPort: 4000
+          env:
+            - name: PORT
+              value: "4000"
+            - name: NODE_ENV
+              value: "production"
+            - name: ALLOWED_ORIGINS
+              value: "*"
+            - name: ADMIN_ORIGINS
+              value: "*"
+            - name: DATABASE_SSL
+              value: "true"
+            - name: REDIS_URL
+              value: "redis://YOUR_REDIS_ENDPOINT:6379"
+          # envFrom pulls every key in the Secret (secrets-example.yaml) in as
+          # an environment variable — DATABASE_URL, ADMIN_JWT_SECRET, etc. —
+          # without listing each one by hand here.
+          envFrom:
+            - secretRef:
+                name: mcb-app-secret
+          # Kubernetes's own health checking — the same idea as the ALB's
+          # /api/health check in the EC2 path, but Kubernetes itself acts on
+          # it directly (won't send traffic to a pod that isn't ready yet,
+          # and restarts one that stops responding).
+          readinessProbe:
+            httpGet: { path: /api/health, port: 4000 }
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /api/health, port: 4000 }
+            initialDelaySeconds: 20
+            periodSeconds: 20
+          resources:
+            requests: { cpu: "250m", memory: "256Mi" }
+            limits: { cpu: "500m", memory: "512Mi" }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mcb-server
+  namespace: minichatbot
+spec:
+  selector: { app: mcb-server }
+  ports:
+    - port: 80
+      targetPort: 4000
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: mcb-server
+  namespace: minichatbot
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: mcb-server
+  minReplicas: 1
+  maxReplicas: 6
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 60 # same 60% target as the EC2 path's ASG policy
