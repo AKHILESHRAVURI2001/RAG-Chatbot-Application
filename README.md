@@ -194,6 +194,7 @@ Before going live:
 
 | I want to… | Read |
 | --- | --- |
+| See the project in 7 slides | [`docs/MiniChatbotAgent-overview.pdf`](docs/MiniChatbotAgent-overview.pdf) |
 | Learn how the code works, step by step | [`docs/understand/`](docs/understand/) |
 | Find where things are, or add a feature | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) |
 | Understand (or set up) the voice agent | [`docs/VOICE.md`](docs/VOICE.md) |
