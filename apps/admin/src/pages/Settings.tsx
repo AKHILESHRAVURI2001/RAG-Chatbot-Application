@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { API_BASE_URL } from '../lib/apiBase';
 import { FiCode, FiShield, FiUsers, FiPlay, FiPenTool, FiMessageCircle, FiZap, FiPower, FiClock, FiDatabase, FiHardDrive, FiBox, FiLock, FiUserCheck } from 'react-icons/fi';
 import type {
   WidgetSettings,
@@ -34,7 +35,6 @@ import { toast } from '../components/ui/Toast';
 
 const WIDGET_HOST_KEY = 'mcb_widget_host_url';
 const API_URL_KEY = 'mcb_embed_api_url';
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL as string;
 
 const CATEGORIES = [
   {

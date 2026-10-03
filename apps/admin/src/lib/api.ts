@@ -1,4 +1,5 @@
 import { authStore } from './auth';
+import { API_BASE_URL as BASE_URL } from './apiBase';
 import {
   API_ROUTES,
   type ChatHistoryResponse,
@@ -36,7 +37,6 @@ import {
   type RestrictedWordDTO,
 } from '../shared';
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL as string;
 
 function authHeaders(): HeadersInit {
   const token = authStore.getToken();
