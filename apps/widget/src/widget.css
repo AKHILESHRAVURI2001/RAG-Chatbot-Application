@@ -160,6 +160,17 @@
   display: flex;
 }
 
+/* While the chat window is open, the bubble is just a plain close button — no glow/rotating-ball
+   animation, no gradient, just the client's own theme color. */
+.mcb-bubble.mcb-window-open {
+  background: var(--mcb-primary);
+}
+
+.mcb-bubble.mcb-window-open::before,
+.mcb-bubble.mcb-window-open::after {
+  display: none;
+}
+
 .mcb-unread-badge {
   display: none;
   position: absolute;
