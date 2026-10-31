@@ -44,6 +44,7 @@ export interface WidgetDomElements {
   inputEl: HTMLTextAreaElement | null;
   sendBtn: HTMLButtonElement | null;
   voiceTypeBtn: HTMLButtonElement | null;
+  micHintEl: HTMLDivElement | null;
   voiceAgentBtn: HTMLButtonElement | null;
   voiceOverlay: HTMLDivElement | null;
   voiceRingInner: HTMLDivElement | null;
@@ -74,6 +75,9 @@ export interface WidgetDomElements {
   settingsToggleBtn: HTMLButtonElement;
   settingsSubmenu: HTMLDivElement;
   confirmOverlay: HTMLDivElement;
+  confirmIconEl: HTMLDivElement;
+  confirmTitleEl: HTMLDivElement;
+  confirmBodyEl: HTMLDivElement;
   confirmCancelBtn: HTMLButtonElement;
   confirmOkBtn: HTMLButtonElement;
   noteBanner: HTMLDivElement | null;
@@ -242,6 +246,10 @@ export class WidgetDomRenderer {
           <button type="button" class="mcb-dictation-cancel" aria-label="Cancel voice typing" title="Cancel voice typing">
             ${CLOSE_X_SVG}
           </button>
+          <div class="mcb-dictation-loading">
+            <span class="mcb-dictation-spinner">${REFRESH_SVG}</span>
+            <span>Loading voice recognition…</span>
+          </div>
           <div class="mcb-dictation-wave">${Array.from(
             { length: 22 },
             (_, i) => `<span data-f="${(0.55 + ((i * 37) % 10) * 0.075).toFixed(2)}"></span>`,
@@ -255,6 +263,7 @@ export class WidgetDomRenderer {
           <button class="mcb-voice-type" aria-label="Voice Typing (Dictation)" title="Voice Typing (Dictation)">
             ${MIC_SVG}
           </button>
+          <div class="mcb-mic-hint">Tap to start voice typing</div>
         </div>
         <div class="mcb-input-actions">
           ${
@@ -374,6 +383,7 @@ export class WidgetDomRenderer {
       inputEl: win.querySelector('.mcb-input-wrapper textarea') as HTMLTextAreaElement | null,
       sendBtn: win.querySelector('.mcb-send') as HTMLButtonElement | null,
       voiceTypeBtn: win.querySelector('.mcb-voice-type') as HTMLButtonElement | null,
+      micHintEl: win.querySelector('.mcb-mic-hint') as HTMLDivElement | null,
       voiceAgentBtn: win.querySelector('.mcb-voice-agent') as HTMLButtonElement | null,
       voiceOverlay: win.querySelector('.mcb-voice-overlay') as HTMLDivElement | null,
       voiceRingInner: win.querySelector('.mcb-voice-ring-inner') as HTMLDivElement | null,
@@ -404,6 +414,9 @@ export class WidgetDomRenderer {
       settingsToggleBtn: win.querySelector('.mcb-settings-toggle') as HTMLButtonElement,
       settingsSubmenu: win.querySelector('.mcb-settings-submenu') as HTMLDivElement,
       confirmOverlay: win.querySelector('.mcb-confirm-overlay') as HTMLDivElement,
+      confirmIconEl: win.querySelector('.mcb-confirm-icon') as HTMLDivElement,
+      confirmTitleEl: win.querySelector('.mcb-confirm-title') as HTMLDivElement,
+      confirmBodyEl: win.querySelector('.mcb-confirm-body') as HTMLDivElement,
       confirmCancelBtn: win.querySelector('.mcb-confirm-cancel') as HTMLButtonElement,
       confirmOkBtn: win.querySelector('.mcb-confirm-ok') as HTMLButtonElement,
       noteBanner: win.querySelector('.mcb-note-banner') as HTMLDivElement | null,

@@ -104,28 +104,50 @@ describe('WidgetStorageService', () => {
   });
 
   describe('sound preference', () => {
-    it('defaults to enabled', () => {
-      expect(storage.isSoundEnabled()).toBe(true);
+    it('defaults to disabled', () => {
+      expect(storage.isSoundEnabled()).toBe(false);
     });
 
-    it('persists the disabled state and can be re-enabled', () => {
-      storage.setSoundEnabled(false);
-      expect(storage.isSoundEnabled()).toBe(false);
+    it('persists the enabled state and can be disabled again', () => {
       storage.setSoundEnabled(true);
       expect(storage.isSoundEnabled()).toBe(true);
+      storage.setSoundEnabled(false);
+      expect(storage.isSoundEnabled()).toBe(false);
     });
   });
 
   describe('mic icon preference', () => {
-    it('defaults to enabled', () => {
-      expect(storage.isMicEnabled()).toBe(true);
+    it('defaults to disabled', () => {
+      expect(storage.isMicEnabled()).toBe(false);
     });
 
-    it('persists the disabled state and can be re-enabled', () => {
-      storage.setMicEnabled(false);
-      expect(storage.isMicEnabled()).toBe(false);
+    it('persists the enabled state and can be disabled again', () => {
       storage.setMicEnabled(true);
       expect(storage.isMicEnabled()).toBe(true);
+      storage.setMicEnabled(false);
+      expect(storage.isMicEnabled()).toBe(false);
+    });
+  });
+
+  describe('voice model notice', () => {
+    it('defaults to not seen', () => {
+      expect(storage.hasSeenVoiceModelNotice()).toBe(false);
+    });
+
+    it('stays seen once confirmed', () => {
+      storage.setVoiceModelNoticeSeen();
+      expect(storage.hasSeenVoiceModelNotice()).toBe(true);
+    });
+  });
+
+  describe('mic hint', () => {
+    it('defaults to not seen', () => {
+      expect(storage.hasSeenMicHint()).toBe(false);
+    });
+
+    it('stays seen once shown', () => {
+      storage.setMicHintSeen();
+      expect(storage.hasSeenMicHint()).toBe(true);
     });
   });
 });

@@ -1,6 +1,7 @@
 // Served from public/sounds/ (see vite.config.ts) — Vite copies that folder verbatim into
 // dist/sounds/ alongside dist/widget.js, rather than inlining these as base64 into the bundle.
 import { getStaticAssetUrl } from '../shared';
+import { createTranscriptionProvider, type TranscriptionProvider } from '../transcription';
 
 export interface AudioServiceCallbacks {
   onVolumeChange?: (level: number, isQuiet: boolean) => void;
@@ -275,121 +276,53 @@ export class WidgetAudioService {
     this.recordedStream = null;
   }
 
-  private dictationRecognition: any = null;
-  private dictationMeterStream: MediaStream | null = null;
-  private dictationAudioContext: AudioContext | null = null;
-  private dictationAnalyser: AnalyserNode | null = null;
-  private dictationRafId = 0;
+  // Delegates to src/transcription/ — see createTranscriptionProvider() to swap the underlying
+  // speech-to-text engine; this service just drives whichever one it returns.
+  private dictationProvider: TranscriptionProvider | null = null;
+  // Set by preloadDictationModel() — a provider that's (or is still) loading its model ahead of
+  // time, with no mic/recording started yet. startDictation() adopts it instead of creating a
+  // fresh one, so an earlier preload actually pays off instead of being thrown away.
+  private preloadedProvider: TranscriptionProvider | null = null;
 
-  /** Measures real mic input level while dictating, so the UI can only animate when audio is actually coming in. */
-  private async startDictationMeter(onLevel: (level: number) => void): Promise<void> {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      this.dictationMeterStream = stream;
-      const AudioContextCtor = window.AudioContext || (window as any).webkitAudioContext;
-      this.dictationAudioContext = new AudioContextCtor();
-      const source = this.dictationAudioContext.createMediaStreamSource(stream);
-      this.dictationAnalyser = this.dictationAudioContext.createAnalyser();
-      this.dictationAnalyser.fftSize = 256;
-      source.connect(this.dictationAnalyser);
-      const data = new Uint8Array(this.dictationAnalyser.frequencyBinCount);
-
-      const loop = () => {
-        if (!this.dictationAnalyser) return;
-        this.dictationAnalyser.getByteTimeDomainData(data);
-        let sumSquares = 0;
-        for (let i = 0; i < data.length; i++) {
-          const v = (data[i] - 128) / 128;
-          sumSquares += v * v;
-        }
-        const level = Math.min(1, Math.sqrt(sumSquares / data.length) * 6);
-        onLevel(level);
-        this.dictationRafId = requestAnimationFrame(loop);
-      };
-      this.dictationRafId = requestAnimationFrame(loop);
-    } catch {
-      /* mic unavailable for metering — dictation still works via SpeechRecognition, UI just stays idle */
-    }
+  /** Starts loading the (large, one-time-download) transcription model in the background, without
+   *  touching the mic — see WhisperTranscriptionProvider.preload(). Returns false if the active
+   *  provider has no such preload step (e.g. WebSpeechTranscriptionProvider needs none) or if a
+   *  dictation session is already running/loading. */
+  public preloadDictationModel(onLoading?: (loading: boolean) => void): boolean {
+    if (this.preloadedProvider || this.dictationProvider) return true;
+    const provider = createTranscriptionProvider();
+    if (!provider.preload) return false;
+    const started = provider.preload(onLoading);
+    if (started) this.preloadedProvider = provider;
+    return started;
   }
 
-  private stopDictationMeter(): void {
-    cancelAnimationFrame(this.dictationRafId);
-    this.dictationAnalyser = null;
-    this.dictationMeterStream?.getTracks().forEach((t) => t.stop());
-    this.dictationMeterStream = null;
-    this.dictationAudioContext?.close().catch(() => {});
-    this.dictationAudioContext = null;
+  /** Cancels and discards an in-progress or finished preload that was never turned into an actual
+   *  dictation session (e.g. the visitor turned the setting back off). */
+  public cancelDictationPreload(): void {
+    this.preloadedProvider?.stop();
+    this.preloadedProvider = null;
   }
 
   public startDictation(
     onTranscript: (text: string) => void,
     onStateChange?: (listening: boolean) => void,
     onLevel?: (level: number) => void,
+    onLoading?: (loading: boolean) => void,
+    onAnalyzing?: (analyzing: boolean) => void,
   ): boolean {
-    const Ctor = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!Ctor) return false;
-
     this.stopDictation();
-
-    try {
-      const recognition = new Ctor();
-      this.dictationRecognition = recognition;
-      recognition.continuous = true;
-      recognition.interimResults = true;
-      recognition.lang = navigator.language || 'en-US';
-
-      recognition.onstart = () => {
-        onStateChange?.(true);
-        if (onLevel) void this.startDictationMeter(onLevel);
-      };
-      recognition.onend = () => {
-        this.dictationRecognition = null;
-        this.stopDictationMeter();
-        onStateChange?.(false);
-      };
-      recognition.onerror = () => {
-        this.dictationRecognition = null;
-        this.stopDictationMeter();
-        onStateChange?.(false);
-      };
-
-      // Chrome's continuous SpeechRecognition can re-finalize an earlier phrase
-      // as a "new" result after a pause, so re-summing e.results[0..length] on
-      // every event double-counts it. Only fold in results from e.resultIndex
-      // onward into a running accumulator instead.
-      let finalTranscript = '';
-      recognition.onresult = (e: any) => {
-        let interimTranscript = '';
-        for (let i = e.resultIndex; i < e.results.length; ++i) {
-          if (e.results[i].isFinal) {
-            finalTranscript += e.results[i][0].transcript + ' ';
-          } else {
-            interimTranscript += e.results[i][0].transcript;
-          }
-        }
-        const combined = (finalTranscript + interimTranscript).trim();
-        if (combined) onTranscript(combined);
-      };
-
-      recognition.start();
-      return true;
-    } catch {
-      this.dictationRecognition = null;
-      onStateChange?.(false);
-      return false;
-    }
+    const provider = this.preloadedProvider ?? createTranscriptionProvider();
+    this.preloadedProvider = null;
+    this.dictationProvider = provider;
+    const started = provider.start({ onTranscript, onStateChange, onLevel, onLoading, onAnalyzing });
+    if (!started) this.dictationProvider = null;
+    return started;
   }
 
   public stopDictation(): void {
-    if (this.dictationRecognition) {
-      try {
-        this.dictationRecognition.stop();
-      } catch {
-        /* ignore */
-      }
-      this.dictationRecognition = null;
-    }
-    this.stopDictationMeter();
+    this.dictationProvider?.stop();
+    this.dictationProvider = null;
   }
 
   private sendSoundEl: HTMLAudioElement | null = null;
@@ -420,6 +353,7 @@ export class WidgetAudioService {
       this.currentPlayingAudio = null;
     }
     this.stopDictation();
+    this.cancelDictationPreload();
     this.stopRecording();
     this.stopBargeIn();
   }

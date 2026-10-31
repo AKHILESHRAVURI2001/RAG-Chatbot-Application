@@ -5,6 +5,7 @@ export * from './types/widget.types';
 export * from './services/widgetStorage';
 export * from './services/widgetApi';
 export * from './services/widgetAudio';
+export * from './transcription';
 export * from './ui/widgetDom';
 export * from './ui/widgetIcons';
 export * from './core/chatWidgetController';

@@ -26,4 +26,16 @@ export default defineConfig({
     outDir: 'dist',
     minify: true,
   },
+  experimental: {
+    // Vite's default behavior for emitted assets (including Worker chunks) in this lib+iife build
+    // hard-codes a root-absolute URL (e.g. "/assets/foo.js"), which only works if dist/ is hosted
+    // at a domain's root — confirmed broken for any subpath deployment. Override it to compute the
+    // URL relative to wherever widget.js's own <script> tag was actually loaded from instead, the
+    // same fix already used for public/ assets (see getStaticAssetUrl in src/shared/assetUrl.ts).
+    renderBuiltUrl(filename) {
+      return {
+        runtime: `((typeof document!=="undefined"&&document.currentScript&&document.currentScript.getAttribute("src"))?new URL(${JSON.stringify(filename)},document.currentScript.getAttribute("src")).href:${JSON.stringify(filename)})`,
+      };
+    },
+  },
 });

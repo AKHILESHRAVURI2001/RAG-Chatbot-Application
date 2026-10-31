@@ -150,12 +150,12 @@ export class WidgetStorageService {
 
   private readonly SOUND_ENABLED_KEY = 'mcb_sound_enabled';
 
-  /** Send/reply notification sounds — on by default. */
+  /** Send/reply notification sounds — off by default. */
   public isSoundEnabled(): boolean {
     try {
-      return localStorage.getItem(this.SOUND_ENABLED_KEY) !== '0';
+      return localStorage.getItem(this.SOUND_ENABLED_KEY) === '1';
     } catch {
-      return true;
+      return false;
     }
   }
 
@@ -169,18 +169,61 @@ export class WidgetStorageService {
 
   private readonly MIC_ENABLED_KEY = 'mcb_mic_enabled';
 
-  /** Whether the voice-typing (dictation) mic icon shows in the input row — on by default. */
+  /** Whether the voice-typing (dictation) mic icon shows in the input row — off by default; the
+   *  visitor has to opt in via Settings before the mic icon (and the voice model download it can
+   *  trigger) ever appears at all. */
   public isMicEnabled(): boolean {
     try {
-      return localStorage.getItem(this.MIC_ENABLED_KEY) !== '0';
+      return localStorage.getItem(this.MIC_ENABLED_KEY) === '1';
     } catch {
-      return true;
+      return false;
     }
   }
 
   public setMicEnabled(enabled: boolean): void {
     try {
       localStorage.setItem(this.MIC_ENABLED_KEY, enabled ? '1' : '0');
+    } catch {
+      /* ignore */
+    }
+  }
+
+  private readonly VOICE_MODEL_NOTICE_SEEN_KEY = 'mcb_voice_model_notice_seen';
+
+  /** Whether the visitor has already confirmed the one-time "this downloads a voice model"
+   *  popup shown the first time they tap the mic button — see ChatWidgetController.toggleVoiceTyping. */
+  public hasSeenVoiceModelNotice(): boolean {
+    try {
+      return localStorage.getItem(this.VOICE_MODEL_NOTICE_SEEN_KEY) === '1';
+    } catch {
+      return false;
+    }
+  }
+
+  public setVoiceModelNoticeSeen(): void {
+    try {
+      localStorage.setItem(this.VOICE_MODEL_NOTICE_SEEN_KEY, '1');
+    } catch {
+      /* ignore */
+    }
+  }
+
+  private readonly MIC_HINT_SEEN_KEY = 'mcb_mic_hint_seen';
+
+  /** Whether the visitor has already seen the one-time "Tap to start voice typing" tooltip shown
+   *  the first time the mic icon becomes visible — separate from hasSeenVoiceModelNotice, which is
+   *  about the model download popup after they've already found and tapped the mic button. */
+  public hasSeenMicHint(): boolean {
+    try {
+      return localStorage.getItem(this.MIC_HINT_SEEN_KEY) === '1';
+    } catch {
+      return false;
+    }
+  }
+
+  public setMicHintSeen(): void {
+    try {
+      localStorage.setItem(this.MIC_HINT_SEEN_KEY, '1');
     } catch {
       /* ignore */
     }

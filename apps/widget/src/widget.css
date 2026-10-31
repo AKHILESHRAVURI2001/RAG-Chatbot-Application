@@ -50,11 +50,13 @@
   width: 50px;
   height: 50px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--mcb-primary) 0%, color-mix(in srgb, var(--mcb-primary) 82%, #0f172a) 100%);
+  /* Gray stop added between the primary color and its darkened edge — an ambient, orb-like
+     gradient rather than a flat two-tone fill. */
+  background: linear-gradient(135deg, var(--mcb-primary) 0%, #94a3b8 55%, color-mix(in srgb, var(--mcb-primary) 82%, #0f172a) 100%);
   color: #ffffff;
   border: none;
   cursor: pointer;
-  box-shadow: 0 10px 28px -4px color-mix(in srgb, var(--mcb-primary) 45%, transparent), 0 4px 12px rgba(0, 0, 0, 0.12), inset 0 1px 1px rgba(255, 255, 255, 0.35);
+  box-shadow: 0 2px 6px -2px color-mix(in srgb, var(--mcb-primary) 25%, transparent), 0 1px 3px rgba(0, 0, 0, 0.06), inset 0 1px 1px rgba(255, 255, 255, 0.35);
   z-index: 2147483000;
   display: flex;
   align-items: center;
@@ -62,11 +64,57 @@
   font-size: 26px;
   animation: mcb-bubble-in 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
   transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.25s ease;
+  isolation: isolate;
+}
+
+/* Rotating color swirl, in the theme color + gray + white — the "surface" of a spinning ball.
+   Sized to extend well past the circle's edge (not just clipped inside it) so it stays visible
+   even with a large custom icon image that covers almost the entire face of the bubble. */
+.mcb-bubble::before {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 0deg,
+    color-mix(in srgb, var(--mcb-primary) 65%, #ffffff) 0deg,
+    #94a3b8 90deg,
+    var(--mcb-primary) 180deg,
+    #ffffff 270deg,
+    color-mix(in srgb, var(--mcb-primary) 65%, #ffffff) 360deg
+  );
+  filter: blur(4px);
+  opacity: 0.6;
+  z-index: -1;
+  animation: mcb-bubble-glow-spin 4s linear infinite;
+}
+
+/* A fixed glossy highlight (top-left) + shadow (bottom-right), like a constant light source
+   sitting over the rotating swirl underneath — that pairing (surface spinning, light staying put)
+   is what sells a rolling-ball illusion instead of a flat spinning ring. Not animated itself: a
+   real light source doesn't move, only the ball's surface does. z-index: -1 keeps both of these
+   strictly behind the icon glyph — being the element's own generated content, they'd otherwise
+   paint on top of and obscure it regardless of DOM order. */
+.mcb-bubble::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0) 38%),
+    radial-gradient(circle at 70% 75%, rgba(15, 23, 42, 0.35) 0%, rgba(15, 23, 42, 0) 48%);
+  pointer-events: none;
+  z-index: -1;
+}
+
+@keyframes mcb-bubble-glow-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .mcb-bubble:hover {
   transform: translateY(-2px) scale(1.05);
-  box-shadow: 0 14px 34px -4px color-mix(in srgb, var(--mcb-primary) 55%, transparent), 0 6px 16px rgba(0, 0, 0, 0.15), inset 0 1px 1px rgba(255, 255, 255, 0.45);
+  box-shadow: 0 6px 16px -4px color-mix(in srgb, var(--mcb-primary) 40%, transparent), 0 3px 8px rgba(0, 0, 0, 0.1), inset 0 1px 1px rgba(255, 255, 255, 0.45);
 }
 
 .mcb-bubble.mcb-pos-bottom-right { bottom: 24px; right: 24px; left: auto; top: auto; }
@@ -1502,13 +1550,19 @@
 .mcb-dictation-bar {
   display: none;
   position: absolute;
-  inset: 8px 10px;
+  /* Shallower vertical inset than before (was 8px) so the bar is a few px taller — the 30px
+     stop button was nearly touching the top/bottom edges with almost no breathing room. */
+  inset: 5px 10px;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   background: #ffffff;
   border: 1.5px solid var(--mcb-primary);
-  border-radius: 999px;
-  padding: 0 5px 0 3px;
+  /* Matches the plain textarea's radius (see .mcb-input-wrapper textarea) — this used to be a
+     full 999px pill, which no longer matched once the rest of the input row was squared off. */
+  border-radius: 6px;
+  /* More even left/right breathing room — the cancel (X) and stop buttons were nearly flush
+     against the pill's own border before. */
+  padding: 0 7px 0 6px;
   box-sizing: border-box;
   z-index: 4;
   box-shadow: 0 2px 8px color-mix(in srgb, var(--mcb-primary) 18%, transparent);
@@ -1566,6 +1620,80 @@
      moves while audio is actually detected, so this is just a smoothing transition. */
   transition: height 0.09s ease-out, opacity 0.09s ease-out;
   opacity: 0.55;
+}
+
+/* Shown instead of the wave while the (first-use) model download/load is in progress — see
+   TranscriptionCallbacks.onLoading. Hidden by default; `.loading` on the parent swaps the two. */
+.mcb-dictation-loading {
+  display: none;
+  flex: 1 1 auto;
+  min-width: 0;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  overflow: hidden;
+  color: var(--mcb-primary);
+  font-size: 12.5px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.mcb-dictation-loading span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mcb-dictation-spinner {
+  flex-shrink: 0;
+  display: flex;
+  width: 14px;
+  height: 14px;
+  animation: mcb-dictation-spin 0.9s linear infinite;
+}
+
+.mcb-dictation-spinner svg {
+  width: 14px !important;
+  height: 14px !important;
+}
+
+@keyframes mcb-dictation-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.mcb-dictation-bar.loading .mcb-dictation-wave {
+  display: none;
+}
+
+.mcb-dictation-bar.loading .mcb-dictation-loading {
+  display: flex;
+}
+
+/* Recording keeps running while a chunk of speech is being analyzed (see
+   TranscriptionCallbacks.onAnalyzing) — this pulses the whole wave as a "thinking" cue, layered
+   on top of (not fighting) the individual bars' own JS-driven, level-reactive opacity/height. */
+.mcb-dictation-bar.analyzing .mcb-dictation-wave {
+  animation: mcb-analyzing-pulse 1s ease-in-out infinite;
+}
+
+@keyframes mcb-analyzing-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+/* Nothing is recording yet while the model is still loading, so there's nothing to stop —
+   only the cancel (X) button makes sense in this state. */
+.mcb-dictation-bar.loading .mcb-dictation-stop {
+  display: none !important;
 }
 
 .mcb-dictation-bar .mcb-dictation-stop {
@@ -2164,6 +2292,40 @@
   animation: mcb-mic-icon-beat 1.5s infinite ease-in-out !important;
 }
 
+/* One-time "Tap to start voice typing" tooltip — see showMicHintIfNeeded(). Hidden by default;
+   `.open` fades it in. Positioned above the mic button with a small tail pointing down to it. */
+.mcb-mic-hint {
+  display: none;
+  position: absolute;
+  bottom: calc(100% + 10px);
+  right: -6px;
+  max-width: 150px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: #1e293b;
+  color: #ffffff;
+  font-size: 11.5px;
+  line-height: 1.35;
+  white-space: nowrap;
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.25);
+  z-index: 5;
+  pointer-events: none;
+}
+
+.mcb-mic-hint::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  right: 14px;
+  border: 5px solid transparent;
+  border-top-color: #1e293b;
+}
+
+.mcb-mic-hint.open {
+  display: block;
+  animation: mcb-msg-in 0.2s ease-out;
+}
+
 @keyframes mcb-mic-pulse {
   0% {
     transform: translateY(-50%) scale(1);
@@ -2326,6 +2488,38 @@
   padding: 30px 24px;
   text-align: center;
   overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+}
+
+/* Light/transparent thumb (not the usual gray) since this overlay has a dark background — and,
+   same as every other scrollable area in the widget, no native up/down arrow buttons. */
+.mcb-voice-overlay::-webkit-scrollbar {
+  width: 5px;
+}
+
+.mcb-voice-overlay::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.mcb-voice-overlay::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 999px;
+}
+
+.mcb-voice-overlay::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.45);
+}
+
+.mcb-voice-overlay::-webkit-scrollbar-button,
+.mcb-voice-overlay::-webkit-scrollbar-button:single-button,
+.mcb-voice-overlay::-webkit-scrollbar-button:vertical:start,
+.mcb-voice-overlay::-webkit-scrollbar-button:vertical:end,
+.mcb-voice-overlay::-webkit-scrollbar-button:increment,
+.mcb-voice-overlay::-webkit-scrollbar-button:decrement {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
 .mcb-voice-overlay.open {

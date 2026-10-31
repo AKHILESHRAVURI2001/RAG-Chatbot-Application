@@ -3,10 +3,16 @@ import { WidgetStorageService } from '../services/widgetStorage';
 import { WidgetApiService } from '../services/widgetApi';
 import { WidgetAudioService } from '../services/widgetAudio';
 import { WidgetDomRenderer, type WidgetDomElements, renderHtml, setBubbleIcon, setUnreadBadge, renderAvatarHtml } from '../ui/widgetDom';
-import { SEND_SVG, STOP_SVG, EXPAND_SVG, COLLAPSE_SVG, VOLUME_SVG, VOLUME_MUTE_SVG, MIC_SVG, MIC_OFF_SVG } from '../ui/widgetIcons';
+import { computeWaveBarStyle, IDLE_WAVE_BAR_STYLE } from '../ui/dictationWave';
+import { SEND_SVG, STOP_SVG, EXPAND_SVG, COLLAPSE_SVG, VOLUME_SVG, VOLUME_MUTE_SVG, MIC_SVG, MIC_OFF_SVG, MIC_LARGE_SVG, REFRESH_SVG } from '../ui/widgetIcons';
 import widgetCss from '../widget.css?inline';
 import { VisitorAuth } from './visitorAuth';
 import { VoiceChat } from './voiceChat';
+
+// Single code-level switch for the whole "preload the offline voice model in the background as
+// soon as the mic icon is enabled" behavior — no UI control for it. Flip to false to make mic
+// enablement purely visual again (the model then only ever loads lazily, on first actual mic tap).
+const PRELOAD_VOICE_MODEL_ON_MIC_ENABLE = true;
 
 export class ChatWidgetController {
   private config!: WidgetConfig;
@@ -25,8 +31,21 @@ export class ChatWidgetController {
   private calloutEl: HTMLDivElement | null = null;
   private userHistory: string[] = [];
   private historyIndex = -1;
+  // The generic confirm dialog (see showConfirm) is a single shared overlay reused for different
+  // prompts (new chat, voice model notice, …) — these hold whichever callbacks the dialog is
+  // currently showing, set right before opening it and cleared the instant it closes.
+  private confirmOnOk: (() => void) | null = null;
+  private confirmOnCancel: (() => void) | null = null;
   private isVoiceTyping = false;
   private voiceTypeInitialText = '';
+  private micHintTimer: ReturnType<typeof setTimeout> | null = null;
+  // Tracks the Whisper model-loading phase (see TranscriptionCallbacks.onLoading) so the UI can
+  // show a "loading voice recognition" state instead of looking stuck during the first-use download.
+  private voiceTypeLoading = false;
+  // Distinguishes an intentional user stop/cancel from the provider giving up on its own (load
+  // timeout, load error) — only the latter should surface an error message to the visitor.
+  private voiceTypeStoppedByUser = false;
+  private voiceTypeReachedListening = false;
   private scrollArrowTimer: ReturnType<typeof setTimeout> | null = null;
   private dictationWaveBars: HTMLSpanElement[] = [];
   private searchMatches: HTMLElement[] = [];
@@ -190,12 +209,27 @@ export class ChatWidgetController {
     this.elements.closeBtn.addEventListener('click', () => this.closeWindow());
     this.elements.newChatBtn.addEventListener('click', () => {
       this.closeMoreMenu();
-      this.elements.confirmOverlay.classList.add('open');
+      this.showConfirm({
+        title: 'Start a new chat?',
+        body: 'This clears your current conversation.',
+        okLabel: 'Start new chat',
+        cancelLabel: 'Keep chatting',
+        onConfirm: () => this.startNewChat(),
+      });
     });
-    this.elements.confirmCancelBtn.addEventListener('click', () => this.elements.confirmOverlay.classList.remove('open'));
+    this.elements.confirmCancelBtn.addEventListener('click', () => {
+      this.elements.confirmOverlay.classList.remove('open');
+      const onCancel = this.confirmOnCancel;
+      this.confirmOnOk = null;
+      this.confirmOnCancel = null;
+      onCancel?.();
+    });
     this.elements.confirmOkBtn.addEventListener('click', () => {
       this.elements.confirmOverlay.classList.remove('open');
-      this.startNewChat();
+      const onOk = this.confirmOnOk;
+      this.confirmOnOk = null;
+      this.confirmOnCancel = null;
+      onOk?.();
     });
 
     this.setupScrollToBottom();
@@ -266,12 +300,38 @@ export class ChatWidgetController {
   }
 
   private toggleVoiceTyping(): void {
-    if (this.isVoiceTyping) {
+    this.hideMicHint();
+    // A click while the model is still loading cancels the attempt, same as clicking it mid-recording.
+    if (this.isVoiceTyping || this.voiceTypeLoading) {
       this.stopVoiceTyping();
       return;
     }
     if (!this.elements.inputEl) return;
+
+    // One-time notice before the (possibly large, first-use-only) voice model ever downloads —
+    // shown once per browser, not again after the visitor confirms it.
+    if (!this.storageService.hasSeenVoiceModelNotice()) {
+      this.showConfirm({
+        icon: MIC_LARGE_SVG,
+        title: 'Enable voice typing?',
+        body: 'This downloads a small voice model the first time — a one-time thing, then it just works.',
+        okLabel: 'Continue',
+        cancelLabel: 'Not now',
+        onConfirm: () => {
+          this.storageService.setVoiceModelNoticeSeen();
+          this.beginVoiceTyping();
+        },
+      });
+      return;
+    }
+    this.beginVoiceTyping();
+  }
+
+  private beginVoiceTyping(): void {
+    if (!this.elements.inputEl) return;
     this.voiceTypeInitialText = this.elements.inputEl.value.trim() ? this.elements.inputEl.value.trim() + ' ' : '';
+    this.voiceTypeStoppedByUser = false;
+    this.voiceTypeReachedListening = false;
     const started = this.audioService.startDictation(
       (transcript) => {
         if (this.elements.inputEl) {
@@ -287,14 +347,37 @@ export class ChatWidgetController {
           listening ? 'Stop Voice Typing' : 'Voice Typing (Dictation)',
         );
         this.elements.dictationBar?.classList.toggle('open', listening);
-        if (!listening) this.resetDictationWave();
+        if (listening) {
+          this.voiceTypeReachedListening = true;
+        } else {
+          this.resetDictationWave();
+          this.elements.dictationBar?.classList.remove('analyzing');
+          // The provider gave up on its own (load timeout/error) without the visitor ever
+          // cancelling and without ever reaching a working mic — tell them, instead of the mic
+          // button just quietly going back to normal with no explanation.
+          if (!this.voiceTypeStoppedByUser && !this.voiceTypeReachedListening) {
+            WidgetDomRenderer.addErrorMessage(
+              this.elements.messagesEl,
+              'Voice typing could not load. Please check your connection and try again.',
+            );
+          }
+        }
       },
       (level) => this.updateDictationWave(level),
+      (loading) => {
+        this.voiceTypeLoading = loading;
+        this.elements.dictationBar?.classList.toggle('loading', loading);
+        if (loading) this.elements.dictationBar?.classList.add('open');
+      },
+      // Whisper processes each chunk of speech in the background while recording keeps running —
+      // this pulses the wave to signal "thinking" instead of looking idle/stuck during that wait.
+      (analyzing) => this.elements.dictationBar?.classList.toggle('analyzing', analyzing),
     );
     if (!started) {
       this.isVoiceTyping = false;
+      this.voiceTypeLoading = false;
       this.elements.voiceTypeBtn?.classList.remove('is-listening');
-      this.elements.dictationBar?.classList.remove('open');
+      this.elements.dictationBar?.classList.remove('open', 'loading', 'analyzing');
       WidgetDomRenderer.addErrorMessage(
         this.elements.messagesEl,
         'Voice typing is not supported in this browser or microphone permission was denied.',
@@ -303,36 +386,37 @@ export class ChatWidgetController {
   }
 
   /** Scales each waveform bar by the live mic level (see WidgetAudioService.startDictationMeter) — bars
-   *  only move while audio is actually being picked up, and settle back to flat once it's quiet. */
+   *  only move while audio is actually being picked up, and settle back to flat once it's quiet.
+   *  The height/opacity math itself lives in dictationWave.ts as a pure, unit-tested function. */
   private updateDictationWave(level: number): void {
     if (!this.dictationWaveBars.length) {
-      this.dictationWaveBars = Array.from(this.elements.dictationBar?.querySelectorAll('span') ?? []);
+      // Scoped to .mcb-dictation-wave — the bar also has unrelated <span>s now (the loading spinner).
+      this.dictationWaveBars = Array.from(this.elements.dictationBar?.querySelectorAll('.mcb-dictation-wave span') ?? []);
     }
-    const minHeight = 4;
-    const maxHeight = 20;
     for (const bar of this.dictationWaveBars) {
       const factor = parseFloat(bar.dataset.f || '1');
-      const scaled = Math.min(1, level * factor * 1.4);
-      const h = minHeight + scaled * (maxHeight - minHeight);
-      bar.style.height = `${h.toFixed(1)}px`;
-      bar.style.opacity = `${(0.55 + scaled * 0.45).toFixed(2)}`;
+      const { height, opacity } = computeWaveBarStyle(level, factor);
+      bar.style.height = `${height.toFixed(1)}px`;
+      bar.style.opacity = `${opacity.toFixed(2)}`;
     }
   }
 
   private resetDictationWave(): void {
     for (const bar of this.dictationWaveBars) {
-      bar.style.height = '4px';
-      bar.style.opacity = '0.55';
+      bar.style.height = `${IDLE_WAVE_BAR_STYLE.height}px`;
+      bar.style.opacity = `${IDLE_WAVE_BAR_STYLE.opacity}`;
     }
   }
 
   private stopVoiceTyping(): void {
+    this.voiceTypeStoppedByUser = true;
     this.audioService.stopDictation();
     this.isVoiceTyping = false;
+    this.voiceTypeLoading = false;
     this.elements.voiceTypeBtn?.classList.remove('is-listening');
     this.elements.voiceTypeBtn?.setAttribute('aria-label', 'Voice Typing (Dictation)');
     this.resetDictationWave();
-    this.elements.dictationBar?.classList.remove('open');
+    this.elements.dictationBar?.classList.remove('open', 'loading', 'analyzing');
   }
 
   /** Stops dictation and discards whatever was transcribed, restoring the text that was in the input before it started. */
@@ -542,10 +626,21 @@ export class ChatWidgetController {
     this.updateMicToggleLabel();
     this.applyMicVisibility();
     micToggleBtn.addEventListener('click', () => {
-      this.storageService.setMicEnabled(!this.storageService.isMicEnabled());
+      const enabled = !this.storageService.isMicEnabled();
+      this.storageService.setMicEnabled(enabled);
       this.updateMicToggleLabel();
       this.applyMicVisibility();
+      if (enabled && PRELOAD_VOICE_MODEL_ON_MIC_ENABLE) {
+        this.audioService.preloadDictationModel();
+      } else {
+        this.audioService.cancelDictationPreload();
+      }
     });
+    // Resume on reload/reopen so the benefit (an already-warm model) persists across visits,
+    // instead of only ever kicking in right after the visitor flips the setting.
+    if (this.storageService.isMicEnabled() && PRELOAD_VOICE_MODEL_ON_MIC_ENABLE) {
+      this.audioService.preloadDictationModel();
+    }
 
     window.addEventListener('resize', () => this.updateExpandAvailability());
     this.updateExpandAvailability();
@@ -609,6 +704,28 @@ export class ChatWidgetController {
     this.elements.settingsToggleBtn.setAttribute('aria-expanded', 'false');
   }
 
+  /** Opens the shared confirm overlay with the given content — see confirmOnOk/confirmOnCancel
+   *  for how OK/Cancel route back to whichever caller is currently showing it. */
+  private showConfirm(opts: {
+    icon?: string;
+    title: string;
+    body: string;
+    okLabel: string;
+    cancelLabel: string;
+    onConfirm: () => void;
+    onCancel?: () => void;
+  }): void {
+    const { confirmOverlay, confirmIconEl, confirmTitleEl, confirmBodyEl, confirmOkBtn, confirmCancelBtn } = this.elements;
+    confirmIconEl.innerHTML = opts.icon ?? REFRESH_SVG;
+    confirmTitleEl.textContent = opts.title;
+    confirmBodyEl.textContent = opts.body;
+    confirmOkBtn.textContent = opts.okLabel;
+    confirmCancelBtn.textContent = opts.cancelLabel;
+    this.confirmOnOk = opts.onConfirm;
+    this.confirmOnCancel = opts.onCancel ?? null;
+    confirmOverlay.classList.add('open');
+  }
+
   private updateSoundToggleLabel(): void {
     const enabled = this.storageService.isSoundEnabled();
     const icon = this.elements.soundToggleBtn.querySelector('.mcb-sound-icon');
@@ -649,9 +766,31 @@ export class ChatWidgetController {
     if (!btn) return;
     if (this.storageService.isMicEnabled()) {
       btn.style.removeProperty('display');
+      this.showMicHintIfNeeded();
     } else {
       btn.style.setProperty('display', 'none', 'important');
+      this.hideMicHint();
     }
+  }
+
+  /** One-time "Tap to start voice typing" tooltip the first time the mic icon ever becomes
+   *  visible — enabling it in Settings only shows the button, it doesn't start listening, which
+   *  visitors have found confusing (see chat history). Auto-hides after a few seconds either way,
+   *  and never shows again once it's been shown once. */
+  private showMicHintIfNeeded(): void {
+    const hint = this.elements.micHintEl;
+    if (!hint || this.storageService.hasSeenMicHint()) return;
+    this.storageService.setMicHintSeen();
+    hint.classList.add('open');
+    this.micHintTimer = setTimeout(() => this.hideMicHint(), 6000);
+  }
+
+  private hideMicHint(): void {
+    if (this.micHintTimer !== null) {
+      clearTimeout(this.micHintTimer);
+      this.micHintTimer = null;
+    }
+    this.elements.micHintEl?.classList.remove('open');
   }
 
   private toggleExpand(): void {
