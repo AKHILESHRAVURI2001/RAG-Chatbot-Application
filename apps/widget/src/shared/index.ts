@@ -5,3 +5,4 @@ export type {
 
 export { formatChatMarkdown } from './chatFormat';
 export { API_ROUTES } from './apiRoutes';
+export { getStaticAssetUrl } from './assetUrl';

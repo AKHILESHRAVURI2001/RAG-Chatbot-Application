@@ -1,7 +1,6 @@
-// `?inline` forces Vite to always embed these as base64 data URIs regardless of file size, so the
-// send/reply sounds ship inside the single dist/widget.js bundle — no separate file to host or CORS for.
-import sendSoundUrl from '../assets/send.wav?inline';
-import replySoundUrl from '../assets/reply.wav?inline';
+// Served from public/sounds/ (see vite.config.ts) — Vite copies that folder verbatim into
+// dist/sounds/ alongside dist/widget.js, rather than inlining these as base64 into the bundle.
+import { getStaticAssetUrl } from '../shared';
 
 export interface AudioServiceCallbacks {
   onVolumeChange?: (level: number, isQuiet: boolean) => void;
@@ -396,17 +395,17 @@ export class WidgetAudioService {
   private sendSoundEl: HTMLAudioElement | null = null;
   private replySoundEl: HTMLAudioElement | null = null;
 
-  /** Plays the bundled send/reply notification sound (see src/assets/). Lazily creates one
-   *  `Audio` element per sound and replays it from the start on every call, so rapid back-to-back
+  /** Plays the send/reply notification sound (see public/sounds/). Lazily creates one `Audio`
+   *  element per sound and replays it from the start on every call, so rapid back-to-back
    *  replies each get their own audible tick instead of being cut off by the previous one. */
   public playNotificationSound(kind: 'send' | 'reply'): void {
     try {
       if (kind === 'send') {
-        if (!this.sendSoundEl) this.sendSoundEl = new Audio(sendSoundUrl);
+        if (!this.sendSoundEl) this.sendSoundEl = new Audio(getStaticAssetUrl('sounds/send.wav'));
         this.sendSoundEl.currentTime = 0;
         void this.sendSoundEl.play().catch(() => {});
       } else {
-        if (!this.replySoundEl) this.replySoundEl = new Audio(replySoundUrl);
+        if (!this.replySoundEl) this.replySoundEl = new Audio(getStaticAssetUrl('sounds/reply.wav'));
         this.replySoundEl.currentTime = 0;
         void this.replySoundEl.play().catch(() => {});
       }
