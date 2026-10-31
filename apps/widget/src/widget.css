@@ -85,8 +85,8 @@
 }
 
 .mcb-bubble .mcb-bubble-img {
-  width: 32px;
-  height: 32px;
+  width: 42px;
+  height: 42px;
   object-fit: contain;
   border-radius: 6px;
 }
@@ -182,6 +182,23 @@
 .mcb-window.mcb-pos-bottom-left { bottom: 78px; left: 24px; right: auto; top: auto; }
 .mcb-window.mcb-pos-top-right { top: 78px; right: 24px; left: auto; bottom: auto; }
 .mcb-window.mcb-pos-top-left { top: 78px; left: 24px; right: auto; bottom: auto; }
+
+.mcb-window.expanded {
+  width: 520px;
+  height: 760px;
+  /* Window is anchored via `bottom`/`top: 78px` (see .mcb-pos-* rules), so capping height
+     against the full viewport alone can push the far edge off-screen — leave room for that offset. */
+  max-height: calc(100vh - 94px);
+  transition: width 0.22s cubic-bezier(0.16, 1, 0.3, 1), height 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* On narrow/mobile screens the window is already capped to near-fullscreen
+   (max-width/max-height above), so expanding it further has no visible effect — hide the button. */
+@media (max-width: 480px) {
+  .mcb-more-dropdown .mcb-expand-toggle {
+    display: none !important;
+  }
+}
 
 @keyframes mcb-window-in {
   from {
@@ -536,13 +553,270 @@
   transform: scale(0.95);
 }
 
-.mcb-new-chat {
-  font-size: 18px;
-  line-height: 1;
-}
-
 .mcb-close {
   font-size: 14px;
+}
+
+.mcb-more-btn {
+  width: 30px;
+  height: 30px;
+}
+
+.mcb-expand-icon,
+.mcb-sound-icon,
+.mcb-mic-toggle-icon {
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Kebab (more options) menu */
+.mcb-more-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.mcb-more-btn.active {
+  background: rgba(255, 255, 255, 0.28);
+}
+
+.mcb-more-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 190px;
+  max-width: calc(100vw - 48px);
+  background: #ffffff;
+  color: #1e293b;
+  border-radius: 12px;
+  box-shadow: 0 16px 36px -4px rgba(15, 23, 42, 0.25), 0 0 0 1px rgba(15, 23, 42, 0.08);
+  padding: 6px;
+  z-index: 1000;
+  display: none;
+  flex-direction: column;
+  animation: mcb-dropdown-in 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  box-sizing: border-box;
+}
+
+.mcb-more-dropdown.open {
+  display: flex;
+}
+
+.mcb-more-dropdown-divider {
+  height: 1px;
+  background: #f1f5f9;
+  margin: 6px 2px;
+  flex-shrink: 0;
+}
+
+.mcb-settings-toggle {
+  justify-content: space-between !important;
+}
+
+.mcb-settings-toggle-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.mcb-settings-chevron {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.mcb-settings-chevron svg {
+  width: 9px !important;
+  height: 9px !important;
+}
+
+.mcb-settings-toggle[aria-expanded="true"] .mcb-settings-chevron {
+  transform: rotate(180deg);
+}
+
+.mcb-settings-submenu {
+  display: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  padding-left: 14px;
+  margin: 4px 0 0 0px;
+}
+
+.mcb-settings-submenu.open {
+  display: flex;
+  animation: mcb-msg-in 0.15s ease-out;
+}
+
+/* Icon-only: no room (or need) for labels once these sit in a compact row under Settings —
+   the label text stays in the DOM for screen readers via aria-label, title gives a hover tooltip.
+   Qualified with .mcb-more-dropdown too — `.mcb-more-dropdown button` (below) ties on specificity
+   otherwise, and being later in the file would win, forcing width:100% and pushing the second
+   icon out past the dropdown's edge. */
+.mcb-more-dropdown .mcb-settings-submenu button {
+  width: 34px !important;
+  flex: 0 0 auto !important;
+  justify-content: center !important;
+  padding: 8px !important;
+  background: #f8fafc !important;
+  border: 1px solid #f1f5f9 !important;
+}
+
+/* "On" state (default): themed icon color, active-looking chip. "Off": dimmed/greyed out so the
+   toggled-off state reads at a glance, not just from the (now-hidden) label text. */
+.mcb-more-dropdown .mcb-settings-submenu button.mcb-settings-item-off {
+  background: #f1f5f9 !important;
+  border-color: #e2e8f0 !important;
+}
+
+.mcb-more-dropdown .mcb-settings-submenu button.mcb-settings-item-off svg {
+  color: #94a3b8 !important;
+}
+
+.mcb-settings-submenu .mcb-sound-label,
+.mcb-settings-submenu .mcb-mic-toggle-label {
+  display: none;
+}
+
+.mcb-more-dropdown button {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  width: 100% !important;
+  height: auto !important;
+  padding: 8px 10px !important;
+  border-radius: 8px !important;
+  border: none !important;
+  background: transparent !important;
+  color: #334155 !important;
+  font-size: 12.5px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+  text-align: left !important;
+  box-shadow: none !important;
+  justify-content: flex-start !important;
+}
+
+/* Themed focus ring instead of the browser's harsh default black outline (only for keyboard
+   navigation — :focus-visible, so a plain mouse click doesn't show it). */
+.mcb-more-dropdown button:focus-visible {
+  outline: none !important;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--mcb-primary) 40%, transparent) !important;
+}
+
+.mcb-more-dropdown button svg {
+  color: color-mix(in srgb, var(--mcb-primary) 75%, #64748b) !important;
+  flex-shrink: 0 !important;
+  transition: color 0.15s ease !important;
+}
+
+.mcb-more-dropdown button:hover {
+  background: color-mix(in srgb, var(--mcb-primary) 10%, #ffffff) !important;
+  color: var(--mcb-primary) !important;
+  transform: none !important;
+}
+
+.mcb-more-dropdown button:hover svg {
+  color: var(--mcb-primary) !important;
+}
+
+/* Search bar */
+.mcb-search-bar {
+  display: none;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 14px;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+  animation: mcb-msg-in 0.18s ease-out;
+}
+
+.mcb-search-bar.open {
+  display: flex;
+}
+
+.mcb-search-bar-icon {
+  display: flex;
+  align-items: center;
+  color: #94a3b8;
+  flex-shrink: 0;
+}
+
+.mcb-search-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  color: #0f172a;
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+}
+
+.mcb-search-input::placeholder {
+  color: #94a3b8;
+}
+
+.mcb-search-count {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: #94a3b8;
+  white-space: nowrap;
+}
+
+.mcb-search-prev,
+.mcb-search-next,
+.mcb-search-close {
+  flex-shrink: 0;
+  width: 22px !important;
+  height: 22px !important;
+  background: transparent !important;
+  border: none !important;
+  color: #94a3b8 !important;
+  font-size: 12px !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+.mcb-search-prev:hover,
+.mcb-search-next:hover,
+.mcb-search-close:hover {
+  background: #e2e8f0 !important;
+  color: #334155 !important;
+}
+
+.mcb-search-prev:disabled,
+.mcb-search-next:disabled {
+  opacity: 0.35 !important;
+  cursor: not-allowed !important;
+}
+
+.mcb-search-prev svg,
+.mcb-search-next svg {
+  width: 11px !important;
+  height: 11px !important;
+}
+
+.mcb-search-prev svg {
+  transform: rotate(180deg);
+}
+
+/* Inline match highlight inside message text */
+.mcb-search-highlight {
+  background: color-mix(in srgb, var(--mcb-primary) 30%, #fde68a);
+  color: inherit;
+  border-radius: 3px;
+  padding: 0 1px;
+}
+
+.mcb-search-highlight.current {
+  background: var(--mcb-primary);
+  color: #ffffff;
 }
 
 /* ==========================================================================
@@ -772,6 +1046,51 @@
 /* ==========================================================================
    Messages Body
    ========================================================================== */
+.mcb-messages-wrap {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.mcb-scroll-bottom {
+  position: absolute;
+  left: 50%;
+  bottom: 12px;
+  width: 28px;
+  height: 28px;
+  min-width: 0;
+  border-radius: 50%;
+  background: #ffffff;
+  color: var(--mcb-primary);
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.16);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translate(-50%, 6px) scale(0.85);
+  transition: opacity 0.2s ease, transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.2s;
+  z-index: 4;
+}
+
+.mcb-scroll-bottom svg {
+  width: 11px;
+  height: 11px;
+  display: block;
+}
+
+.mcb-scroll-bottom.visible {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translate(-50%, 0) scale(1);
+}
+
 .mcb-messages {
   flex: 1;
   min-height: 0;
@@ -801,7 +1120,12 @@
   width: 0px !important;
 }
 
-.mcb-messages::-webkit-scrollbar-button {
+.mcb-messages::-webkit-scrollbar-button,
+.mcb-messages::-webkit-scrollbar-button:single-button,
+.mcb-messages::-webkit-scrollbar-button:vertical:start,
+.mcb-messages::-webkit-scrollbar-button:vertical:end,
+.mcb-messages::-webkit-scrollbar-button:increment,
+.mcb-messages::-webkit-scrollbar-button:decrement {
   display: none !important;
   width: 0px !important;
   height: 0px !important;
@@ -884,14 +1208,14 @@
   animation: mcb-msg-in 0.22s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* Message time (time of day only). It sits in the bubble's bottom-right corner, inside the existing
-   padding, so it adds no height — the bubble is exactly as tall as the text alone. */
+/* Message time (time of day only) — hidden for now, kept in the DOM in case it's turned back on.
+   .mcb-msg stays `position: relative` so .mcb-time still anchors correctly if re-enabled. */
 .mcb-msg:has(> .mcb-time) {
   position: relative;
-  min-width: 76px; /* a one-word message still has room for the time beside its corner */
 }
 
 .mcb-time {
+  display: none;
   position: absolute;
   right: 10px;
   bottom: 1px;
@@ -1077,7 +1401,9 @@
   margin: 0 0 8px;
 }
 
-.mcb-msg.bot p:last-child {
+/* :last-of-type, not :last-child — the hidden .mcb-time span (see above) is the actual last
+   child, which would otherwise stop this from matching the real last paragraph. */
+.mcb-msg.bot p:last-of-type {
   margin-bottom: 0;
 }
 
@@ -1092,7 +1418,7 @@
   padding-left: 18px;
 }
 
-.mcb-msg.bot ul:last-child {
+.mcb-msg.bot ul:last-of-type {
   margin-bottom: 0;
 }
 
@@ -1146,10 +1472,12 @@
 .mcb-input-row {
   flex-shrink: 0;
   display: flex;
-  align-items: center;
+  /* flex-end, not center — as the textarea grows to multiple lines, the send/voice buttons
+     should stay anchored to the bottom line instead of drifting toward the vertical middle. */
+  align-items: flex-end;
   width: 100%;
   box-sizing: border-box;
-  border-top: 1px solid #f1f5f9;
+  border-top: 1px solid color-mix(in srgb, var(--mcb-primary) 18%, #e2e8f0);
   padding: 8px 10px;
   gap: 8px;
   background: #ffffff;
@@ -1168,55 +1496,187 @@
   box-sizing: border-box;
 }
 
-.mcb-input-wrapper input {
+/* ==========================================================================
+   Voice Typing (Dictation) Pill — replaces the input row while listening
+   ========================================================================== */
+.mcb-dictation-bar {
+  display: none;
+  position: absolute;
+  inset: 8px 10px;
+  align-items: center;
+  gap: 8px;
+  background: #ffffff;
+  border: 1.5px solid var(--mcb-primary);
+  border-radius: 999px;
+  padding: 0 5px 0 3px;
+  box-sizing: border-box;
+  z-index: 4;
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--mcb-primary) 18%, transparent);
+}
+
+.mcb-dictation-bar.open {
+  display: flex;
+  animation: mcb-msg-in 0.16s ease-out;
+}
+
+/* Qualified with the parent class — `.mcb-input-row button` (a descendant selector, higher
+   specificity than a single class) would otherwise force this to its 34px default size. */
+.mcb-dictation-bar .mcb-dictation-cancel {
+  flex-shrink: 0;
+  width: 26px !important;
+  height: 26px !important;
+  min-width: 26px !important;
+  min-height: 0 !important;
+  border-radius: 50% !important;
+  border: none !important;
+  background: transparent !important;
+  color: #94a3b8 !important;
+  font-size: 12px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer;
+  box-shadow: none !important;
+  transition: all 0.15s ease;
+}
+
+.mcb-dictation-bar .mcb-dictation-cancel:hover {
+  background: #f1f5f9 !important;
+  color: #334155 !important;
+}
+
+.mcb-dictation-wave {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2.5px;
+  height: 22px;
+  overflow: hidden;
+}
+
+.mcb-dictation-wave span {
+  flex-shrink: 0;
+  width: 2.5px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--mcb-primary);
+  /* Height is driven by JS from the live mic level (see updateDictationWave) — it only
+     moves while audio is actually detected, so this is just a smoothing transition. */
+  transition: height 0.09s ease-out, opacity 0.09s ease-out;
+  opacity: 0.55;
+}
+
+.mcb-dictation-bar .mcb-dictation-stop {
+  flex-shrink: 0;
+  width: 30px !important;
+  height: 30px !important;
+  min-width: 30px !important;
+  min-height: 0 !important;
+  border-radius: 50% !important;
+  background: #ef4444 !important;
+  color: #ffffff !important;
+  border: none !important;
+  box-shadow: 0 2px 6px rgba(239, 68, 68, 0.4) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+  animation: mcb-dictation-pulse 1.8s infinite ease-in-out;
+}
+
+@keyframes mcb-dictation-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.45), 0 2px 6px rgba(239, 68, 68, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 7px rgba(239, 68, 68, 0), 0 2px 6px rgba(239, 68, 68, 0.4);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0), 0 2px 6px rgba(239, 68, 68, 0.4);
+  }
+}
+
+.mcb-dictation-stop svg {
+  width: 11px !important;
+  height: 11px !important;
+}
+
+.mcb-dictation-stop:hover {
+  transform: scale(1.06);
+}
+
+.mcb-dictation-stop:active {
+  transform: scale(0.95);
+}
+
+.mcb-input-wrapper textarea {
   width: 100%;
   min-width: 0 !important;
   box-sizing: border-box;
   border: 1.5px solid #e2e8f0;
   background: #f8fafc;
   color: #0f172a;
-  border-radius: 999px;
-  padding: 8px 34px 8px 14px;
+  border-radius: 6px;
+  /* Padding + line-height here are tuned to add up to ~34px (min-height, below) with
+     near-zero slack — a textarea always top-aligns its content, so any leftover slack between
+     the natural content height and min-height shows up as the caret/text sitting high with a
+     visible gap underneath instead of looking centered. */
+  padding: 7px 34px 7px 14px;
   font-size: 13px;
   font-family: inherit;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  line-height: 1.35;
+  resize: none;
+  overflow-y: auto;
+  min-height: 34px;
+  /* ~3 lines at this font-size/line-height, plus vertical padding — grows up to this, then scrolls. */
+  max-height: 72px;
+  display: block;
+  transition: border-color 0.2s cubic-bezier(0.16, 1, 0.3, 1), background 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
 }
 
-.mcb-input-wrapper input::placeholder {
+.mcb-input-wrapper textarea::-webkit-scrollbar {
+  width: 4px;
+}
+
+.mcb-input-wrapper textarea::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 999px;
+}
+
+/* Hide the native up/down scrollbar arrow buttons some browsers (notably Windows Chrome/Edge)
+   render on a scrollable textarea — the plain ::-webkit-scrollbar-button rule alone doesn't
+   always catch every increment/decrement sub-state, so target them explicitly too. */
+.mcb-input-wrapper textarea::-webkit-scrollbar-button,
+.mcb-input-wrapper textarea::-webkit-scrollbar-button:single-button,
+.mcb-input-wrapper textarea::-webkit-scrollbar-button:vertical:start,
+.mcb-input-wrapper textarea::-webkit-scrollbar-button:vertical:end,
+.mcb-input-wrapper textarea::-webkit-scrollbar-button:increment,
+.mcb-input-wrapper textarea::-webkit-scrollbar-button:decrement {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+.mcb-input-wrapper textarea::placeholder {
   color: #94a3b8;
 }
 
-.mcb-input-wrapper input:focus {
+.mcb-input-wrapper textarea:focus {
   outline: none;
   border-color: var(--mcb-primary);
   background: #ffffff;
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--mcb-primary) 16%, transparent);
 }
 
-.mcb-input-row input {
-  flex: 1 1 auto;
-  min-width: 0 !important;
-  width: 0;
-  box-sizing: border-box;
-  border: 1.5px solid #e2e8f0;
-  background: #f8fafc;
+/* Themed text-selection highlight instead of the browser's generic blue. */
+.mcb-input-wrapper textarea::selection {
+  background: color-mix(in srgb, var(--mcb-primary) 35%, #ffffff);
   color: #0f172a;
-  border-radius: 999px;
-  padding: 8px 34px 8px 14px;
-  font-size: 13px;
-  font-family: inherit;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.mcb-input-row input::placeholder {
-  color: #94a3b8;
-}
-
-.mcb-input-row input:focus {
-  outline: none;
-  border-color: var(--mcb-primary);
-  background: #ffffff;
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--mcb-primary) 16%, transparent);
 }
 
 .mcb-input-row button {
@@ -1998,6 +2458,17 @@
   border-radius: 999px;
 }
 
+.mcb-voice-caption::-webkit-scrollbar-button,
+.mcb-voice-caption::-webkit-scrollbar-button:single-button,
+.mcb-voice-caption::-webkit-scrollbar-button:vertical:start,
+.mcb-voice-caption::-webkit-scrollbar-button:vertical:end,
+.mcb-voice-caption::-webkit-scrollbar-button:increment,
+.mcb-voice-caption::-webkit-scrollbar-button:decrement {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
 .mcb-voice-caption-transcript {
   text-align: center;
   font-style: italic;
@@ -2080,17 +2551,20 @@
    ========================================================================== */
 .mcb-proactive-callout {
   position: fixed;
-  bottom: 82px;
+  bottom: 94px;
   right: 24px;
-  max-width: 250px;
+  max-width: min(228px, calc(100vw - 48px));
   background: #ffffff;
   color: #1e293b;
-  border-radius: 16px;
-  border-bottom-right-radius: 4px;
-  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.18), 0 0 0 1px rgba(15, 23, 42, 0.06);
-  padding: 13px 32px 13px 15px;
-  font-size: 13.5px;
-  line-height: 1.45;
+  border: 1px solid color-mix(in srgb, var(--mcb-primary) 14%, #e2e8f0);
+  border-radius: 14px;
+  /* Sharp corner nearest the bubble reads as a speech-bubble tail without needing a separate
+     element that can end up overlapping the bubble's own icon. */
+  border-bottom-right-radius: 3px;
+  box-shadow: 0 8px 20px -4px rgba(15, 23, 42, 0.16), 0 0 0 1px rgba(15, 23, 42, 0.04);
+  padding: 10px 22px 10px 13px;
+  font-size: 13px;
+  line-height: 1.4;
   cursor: pointer;
   z-index: 2147482999;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -2100,21 +2574,26 @@
 
 .mcb-proactive-callout:hover {
   transform: translateY(-2px);
-  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.22), 0 0 0 1px rgba(15, 23, 42, 0.08);
+  box-shadow: 0 12px 26px -4px rgba(15, 23, 42, 0.2), 0 0 0 1px rgba(15, 23, 42, 0.06);
+}
+
+.mcb-proactive-text {
+  font-weight: 500;
+  color: #1e293b;
 }
 
 .mcb-proactive-close {
   position: absolute;
-  top: 7px;
-  right: 7px;
-  width: 22px;
-  height: 22px;
+  top: 8px;
+  right: 8px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
   background: none;
   border: none;
   color: #94a3b8;
   cursor: pointer;
-  font-size: 12px;
+  font-size: 11px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2188,8 +2667,8 @@
     padding-bottom: max(8px, env(safe-area-inset-bottom, 8px));
   }
 
-  .mcb-input-row input {
-    padding: 8px 34px 8px 12px;
+  .mcb-input-wrapper textarea {
+    padding: 7px 34px 7px 12px;
     font-size: 13.5px;
   }
 
@@ -2201,7 +2680,7 @@
   }
 
   .mcb-proactive-callout {
-    bottom: 68px;
+    bottom: 86px;
     right: 16px;
     max-width: calc(100vw - 32px);
   }

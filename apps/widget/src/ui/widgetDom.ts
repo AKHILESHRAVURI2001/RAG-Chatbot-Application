@@ -6,6 +6,7 @@ import {
   MIC_SVG,
   MIC_LARGE_SVG,
   SEND_SVG,
+  STOP_SVG,
   REFRESH_SVG,
   WAVEFORM_SVG,
   LOCK_SVG,
@@ -13,6 +14,15 @@ import {
   USER_PLUS_SVG,
   LOGIN_SVG,
   LOGOUT_SVG,
+  CHEVRON_DOWN_SVG,
+  SEARCH_SVG,
+  EXPAND_SVG,
+  MENU_SVG,
+  DOWNLOAD_SVG,
+  PLUS_SVG,
+  CLOSE_X_SVG,
+  VOLUME_SVG,
+  GEAR_SVG,
 } from './widgetIcons';
 import widgetCss from '../widget.css?inline';
 import {
@@ -31,7 +41,7 @@ export interface WidgetDomElements {
   window: HTMLDivElement;
   headerAvatar: HTMLDivElement;
   messagesEl: HTMLDivElement;
-  inputEl: HTMLInputElement | null;
+  inputEl: HTMLTextAreaElement | null;
   sendBtn: HTMLButtonElement | null;
   voiceTypeBtn: HTMLButtonElement | null;
   voiceAgentBtn: HTMLButtonElement | null;
@@ -41,8 +51,28 @@ export interface WidgetDomElements {
   voiceCaptionEl: HTMLDivElement | null;
   voiceStopBtn: HTMLButtonElement | null;
   voiceBackBtn: HTMLButtonElement | null;
+  dictationBar: HTMLDivElement | null;
+  dictationCancelBtn: HTMLButtonElement | null;
+  dictationStopBtn: HTMLButtonElement | null;
   closeBtn: HTMLButtonElement;
   newChatBtn: HTMLButtonElement;
+  scrollBottomBtn: HTMLButtonElement;
+  searchToggleBtn: HTMLButtonElement;
+  searchBar: HTMLDivElement;
+  searchInput: HTMLInputElement;
+  searchCloseBtn: HTMLButtonElement;
+  searchCount: HTMLSpanElement;
+  searchPrevBtn: HTMLButtonElement;
+  searchNextBtn: HTMLButtonElement;
+  expandBtn: HTMLButtonElement;
+  moreWrapper: HTMLDivElement;
+  moreBtn: HTMLButtonElement;
+  moreDropdown: HTMLDivElement;
+  downloadTranscriptBtn: HTMLButtonElement;
+  soundToggleBtn: HTMLButtonElement;
+  micToggleBtn: HTMLButtonElement;
+  settingsToggleBtn: HTMLButtonElement;
+  settingsSubmenu: HTMLDivElement;
   confirmOverlay: HTMLDivElement;
   confirmCancelBtn: HTMLButtonElement;
   confirmOkBtn: HTMLButtonElement;
@@ -135,9 +165,61 @@ export class WidgetDomRenderer {
               </button>
             </div>
           </div>
-          <button class="mcb-new-chat" aria-label="Start a new chat" title="Start a new chat">＋</button>
+          <div class="mcb-more-wrapper">
+            <button type="button" class="mcb-more-btn" aria-label="More options" title="More options" aria-expanded="false" aria-haspopup="true">
+              ${MENU_SVG}
+            </button>
+            <div class="mcb-more-dropdown" role="menu">
+              <button type="button" class="mcb-new-chat" role="menuitem">
+                ${PLUS_SVG}
+                <span>New chat</span>
+              </button>
+              <button type="button" class="mcb-expand-toggle" role="menuitem">
+                <span class="mcb-expand-icon">${EXPAND_SVG}</span>
+                <span class="mcb-expand-label">Expand window</span>
+              </button>
+              <button type="button" class="mcb-download-transcript" role="menuitem">
+                ${DOWNLOAD_SVG}
+                <span>Download transcript</span>
+              </button>
+              <button type="button" class="mcb-search-toggle" role="menuitem">
+                ${SEARCH_SVG}
+                <span>Search in chat</span>
+              </button>
+              <div class="mcb-more-dropdown-divider"></div>
+              <button type="button" class="mcb-settings-toggle" role="menuitem" aria-expanded="false" aria-haspopup="true">
+                <span class="mcb-settings-toggle-main">
+                  ${GEAR_SVG}
+                  <span>Settings</span>
+                </span>
+                <span class="mcb-settings-chevron">${CHEVRON_DOWN_SVG}</span>
+              </button>
+              <div class="mcb-settings-submenu" role="menu">
+                <button type="button" class="mcb-sound-toggle" role="menuitem">
+                  <span class="mcb-sound-icon">${VOLUME_SVG}</span>
+                  <span class="mcb-sound-label">Mute notifications</span>
+                </button>
+                <button type="button" class="mcb-mic-toggle" role="menuitem">
+                  <span class="mcb-mic-toggle-icon">${MIC_SVG}</span>
+                  <span class="mcb-mic-toggle-label">Hide mic icon</span>
+                </button>
+              </div>
+            </div>
+          </div>
           <button class="mcb-close" aria-label="Close">✕</button>
         </div>
+      </div>
+      <div class="mcb-search-bar">
+        <span class="mcb-search-bar-icon">${SEARCH_SVG}</span>
+        <input type="text" class="mcb-search-input" placeholder="Search in conversation…" />
+        <span class="mcb-search-count"></span>
+        <button type="button" class="mcb-search-prev" aria-label="Previous match" title="Previous match (Shift+Enter)">
+          ${CHEVRON_DOWN_SVG}
+        </button>
+        <button type="button" class="mcb-search-next" aria-label="Next match" title="Next match (Enter)">
+          ${CHEVRON_DOWN_SVG}
+        </button>
+        <button type="button" class="mcb-search-close" aria-label="Close search">✕</button>
       </div>
       ${
         config.note
@@ -147,12 +229,29 @@ export class WidgetDomRenderer {
       </div>`
           : ''
       }
-      <div class="mcb-messages" role="log" aria-live="polite" aria-atomic="false"></div>
+      <div class="mcb-messages-wrap">
+        <div class="mcb-messages" role="log" aria-live="polite" aria-atomic="false"></div>
+        <button type="button" class="mcb-scroll-bottom" aria-label="Scroll to latest messages" title="Scroll to latest messages">
+          ${CHEVRON_DOWN_SVG}
+        </button>
+      </div>
       ${
         config.enabled
           ? `<div class="mcb-input-row">
+        <div class="mcb-dictation-bar">
+          <button type="button" class="mcb-dictation-cancel" aria-label="Cancel voice typing" title="Cancel voice typing">
+            ${CLOSE_X_SVG}
+          </button>
+          <div class="mcb-dictation-wave">${Array.from(
+            { length: 22 },
+            (_, i) => `<span data-f="${(0.55 + ((i * 37) % 10) * 0.075).toFixed(2)}"></span>`,
+          ).join('')}</div>
+          <button type="button" class="mcb-dictation-stop" aria-label="Stop voice typing" title="Stop voice typing">
+            ${STOP_SVG}
+          </button>
+        </div>
         <div class="mcb-input-wrapper">
-          <input type="text" placeholder="Enter a message…" />
+          <textarea rows="1" maxlength="200" placeholder="Enter a message…"></textarea>
           <button class="mcb-voice-type" aria-label="Voice Typing (Dictation)" title="Voice Typing (Dictation)">
             ${MIC_SVG}
           </button>
@@ -272,7 +371,7 @@ export class WidgetDomRenderer {
       window: win,
       headerAvatar: win.querySelector('.mcb-header-avatar') as HTMLDivElement,
       messagesEl: win.querySelector('.mcb-messages') as HTMLDivElement,
-      inputEl: win.querySelector('.mcb-input-wrapper input') as HTMLInputElement | null,
+      inputEl: win.querySelector('.mcb-input-wrapper textarea') as HTMLTextAreaElement | null,
       sendBtn: win.querySelector('.mcb-send') as HTMLButtonElement | null,
       voiceTypeBtn: win.querySelector('.mcb-voice-type') as HTMLButtonElement | null,
       voiceAgentBtn: win.querySelector('.mcb-voice-agent') as HTMLButtonElement | null,
@@ -282,8 +381,28 @@ export class WidgetDomRenderer {
       voiceCaptionEl: win.querySelector('.mcb-voice-caption') as HTMLDivElement | null,
       voiceStopBtn: win.querySelector('.mcb-voice-stop') as HTMLButtonElement | null,
       voiceBackBtn: win.querySelector('.mcb-voice-back') as HTMLButtonElement | null,
+      dictationBar: win.querySelector('.mcb-dictation-bar') as HTMLDivElement | null,
+      dictationCancelBtn: win.querySelector('.mcb-dictation-cancel') as HTMLButtonElement | null,
+      dictationStopBtn: win.querySelector('.mcb-dictation-stop') as HTMLButtonElement | null,
       closeBtn: win.querySelector('.mcb-close') as HTMLButtonElement,
       newChatBtn: win.querySelector('.mcb-new-chat') as HTMLButtonElement,
+      scrollBottomBtn: win.querySelector('.mcb-scroll-bottom') as HTMLButtonElement,
+      searchToggleBtn: win.querySelector('.mcb-search-toggle') as HTMLButtonElement,
+      searchBar: win.querySelector('.mcb-search-bar') as HTMLDivElement,
+      searchInput: win.querySelector('.mcb-search-input') as HTMLInputElement,
+      searchCloseBtn: win.querySelector('.mcb-search-close') as HTMLButtonElement,
+      searchCount: win.querySelector('.mcb-search-count') as HTMLSpanElement,
+      searchPrevBtn: win.querySelector('.mcb-search-prev') as HTMLButtonElement,
+      searchNextBtn: win.querySelector('.mcb-search-next') as HTMLButtonElement,
+      expandBtn: win.querySelector('.mcb-expand-toggle') as HTMLButtonElement,
+      moreWrapper: win.querySelector('.mcb-more-wrapper') as HTMLDivElement,
+      moreBtn: win.querySelector('.mcb-more-btn') as HTMLButtonElement,
+      moreDropdown: win.querySelector('.mcb-more-dropdown') as HTMLDivElement,
+      downloadTranscriptBtn: win.querySelector('.mcb-download-transcript') as HTMLButtonElement,
+      soundToggleBtn: win.querySelector('.mcb-sound-toggle') as HTMLButtonElement,
+      micToggleBtn: win.querySelector('.mcb-mic-toggle') as HTMLButtonElement,
+      settingsToggleBtn: win.querySelector('.mcb-settings-toggle') as HTMLButtonElement,
+      settingsSubmenu: win.querySelector('.mcb-settings-submenu') as HTMLDivElement,
       confirmOverlay: win.querySelector('.mcb-confirm-overlay') as HTMLDivElement,
       confirmCancelBtn: win.querySelector('.mcb-confirm-cancel') as HTMLButtonElement,
       confirmOkBtn: win.querySelector('.mcb-confirm-ok') as HTMLButtonElement,

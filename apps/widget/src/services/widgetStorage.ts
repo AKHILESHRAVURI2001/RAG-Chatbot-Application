@@ -9,6 +9,16 @@ function generateUuid(): string {
   });
 }
 
+/** Short fingerprint of a string (not for security — just change detection), so "was this message
+ *  already dismissed" doesn't require storing the full message text in localStorage. */
+function fingerprint(text: string): string {
+  let hash = 0;
+  for (let i = 0; i < text.length; i++) {
+    hash = (Math.imul(31, hash) + text.charCodeAt(i)) | 0;
+  }
+  return hash.toString(36);
+}
+
 export class WidgetStorageService {
   private readonly SESSION_KEY = 'mcb_session_id';
   private readonly NOTE_DISMISSED_KEY = 'mcb_note_dismissed';
@@ -31,7 +41,7 @@ export class WidgetStorageService {
 
   public isNoteDismissed(note: string): boolean {
     try {
-      return localStorage.getItem(this.NOTE_DISMISSED_KEY) === note;
+      return localStorage.getItem(this.NOTE_DISMISSED_KEY) === fingerprint(note);
     } catch {
       return false;
     }
@@ -39,7 +49,7 @@ export class WidgetStorageService {
 
   public dismissNote(note: string): void {
     try {
-      localStorage.setItem(this.NOTE_DISMISSED_KEY, note);
+      localStorage.setItem(this.NOTE_DISMISSED_KEY, fingerprint(note));
     } catch {
       /* ignore */
     }
@@ -55,7 +65,7 @@ export class WidgetStorageService {
 
   public isProactiveDismissed(message: string): boolean {
     try {
-      return localStorage.getItem(this.PROACTIVE_DISMISSED_KEY) === message;
+      return localStorage.getItem(this.PROACTIVE_DISMISSED_KEY) === fingerprint(message);
     } catch {
       return false;
     }
@@ -63,7 +73,7 @@ export class WidgetStorageService {
 
   public dismissProactive(message: string): void {
     try {
-      localStorage.setItem(this.PROACTIVE_DISMISSED_KEY, message);
+      localStorage.setItem(this.PROACTIVE_DISMISSED_KEY, fingerprint(message));
     } catch {
       /* ignore */
     }
@@ -109,6 +119,68 @@ export class WidgetStorageService {
   public setVisitorUser(user: { id: string; name: string; email: string }): void {
     try {
       localStorage.setItem(this.VISITOR_USER_KEY, JSON.stringify(user));
+    } catch {
+      /* ignore */
+    }
+  }
+
+  private readonly WIDGET_OPEN_KEY = 'mcb_widget_open';
+
+  /** Whether the chat window was left open — sessionStorage, so it survives navigating to another
+   *  page on the same site (e.g. clicking a link in a message) but resets once the tab is closed. */
+  public isWidgetOpen(): boolean {
+    try {
+      return sessionStorage.getItem(this.WIDGET_OPEN_KEY) === '1';
+    } catch {
+      return false;
+    }
+  }
+
+  public setWidgetOpen(open: boolean): void {
+    try {
+      if (open) {
+        sessionStorage.setItem(this.WIDGET_OPEN_KEY, '1');
+      } else {
+        sessionStorage.removeItem(this.WIDGET_OPEN_KEY);
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+
+  private readonly SOUND_ENABLED_KEY = 'mcb_sound_enabled';
+
+  /** Send/reply notification sounds — on by default. */
+  public isSoundEnabled(): boolean {
+    try {
+      return localStorage.getItem(this.SOUND_ENABLED_KEY) !== '0';
+    } catch {
+      return true;
+    }
+  }
+
+  public setSoundEnabled(enabled: boolean): void {
+    try {
+      localStorage.setItem(this.SOUND_ENABLED_KEY, enabled ? '1' : '0');
+    } catch {
+      /* ignore */
+    }
+  }
+
+  private readonly MIC_ENABLED_KEY = 'mcb_mic_enabled';
+
+  /** Whether the voice-typing (dictation) mic icon shows in the input row — on by default. */
+  public isMicEnabled(): boolean {
+    try {
+      return localStorage.getItem(this.MIC_ENABLED_KEY) !== '0';
+    } catch {
+      return true;
+    }
+  }
+
+  public setMicEnabled(enabled: boolean): void {
+    try {
+      localStorage.setItem(this.MIC_ENABLED_KEY, enabled ? '1' : '0');
     } catch {
       /* ignore */
     }

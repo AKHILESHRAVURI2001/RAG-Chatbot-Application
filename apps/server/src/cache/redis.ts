@@ -49,6 +49,7 @@ const NAMESPACE = 'minichatbot';
 
 let redisInstance: Redis | null = null;
 let isRedisAvailable = false;
+let hasWarnedOffline = false;
 
 if (env.REDIS_URL && env.REDIS_URL.trim().length > 0) {
   try {
@@ -61,6 +62,7 @@ if (env.REDIS_URL && env.REDIS_URL.trim().length > 0) {
 
     redisInstance.on('connect', () => {
       isRedisAvailable = true;
+      hasWarnedOffline = false;
     });
 
     redisInstance.on('ready', () => {
@@ -69,7 +71,10 @@ if (env.REDIS_URL && env.REDIS_URL.trim().length > 0) {
 
     redisInstance.on('error', (err) => {
       isRedisAvailable = false;
-      console.warn('[cache] Redis offline — continuing with in-memory cache:', err.message);
+      if (!hasWarnedOffline) {
+        hasWarnedOffline = true;
+        console.warn('[cache] Redis offline — continuing with in-memory cache:', err.message);
+      }
     });
 
     redisInstance.on('close', () => {

@@ -3,7 +3,7 @@ import { WidgetStorageService } from '../services/widgetStorage';
 import { WidgetApiService } from '../services/widgetApi';
 import { WidgetAudioService } from '../services/widgetAudio';
 import { WidgetDomRenderer, type WidgetDomElements, renderHtml, setBubbleIcon, setUnreadBadge, renderAvatarHtml } from '../ui/widgetDom';
-import { SEND_SVG, STOP_SVG } from '../ui/widgetIcons';
+import { SEND_SVG, STOP_SVG, EXPAND_SVG, COLLAPSE_SVG, VOLUME_SVG, VOLUME_MUTE_SVG, MIC_SVG, MIC_OFF_SVG } from '../ui/widgetIcons';
 import widgetCss from '../widget.css?inline';
 import { VisitorAuth } from './visitorAuth';
 import { VoiceChat } from './voiceChat';
@@ -27,6 +27,10 @@ export class ChatWidgetController {
   private historyIndex = -1;
   private isVoiceTyping = false;
   private voiceTypeInitialText = '';
+  private scrollArrowTimer: ReturnType<typeof setTimeout> | null = null;
+  private dictationWaveBars: HTMLSpanElement[] = [];
+  private searchMatches: HTMLElement[] = [];
+  private searchMatchIndex = -1;
 
   constructor(
     private readonly options: WidgetInitOptions,
@@ -69,6 +73,7 @@ export class ChatWidgetController {
     this.setupProactiveCallout();
     this.setupNoteBanner();
     this.setupEventListeners();
+    this.setupMobileKeyboardFix();
     this.visitorAuth = new VisitorAuth({
       getConfig: () => this.config,
       elements: this.elements,
@@ -82,6 +87,15 @@ export class ChatWidgetController {
     this.rootEl.appendChild(this.elements.bubble);
     this.rootEl.appendChild(this.elements.window);
     document.body.appendChild(this.rootEl);
+
+    // Re-measure now that the textarea is actually connected to the document — calling this
+    // earlier (inside setupEventListeners, before the DOM append above) reads scrollHeight on a
+    // disconnected element, which browsers report unreliably (often far too small).
+    this.autoGrowInput();
+
+    if (this.storageService.isWidgetOpen()) {
+      void this.openWindow();
+    }
   }
 
   public destroy(): void {
@@ -102,7 +116,7 @@ export class ChatWidgetController {
         callout.setAttribute('translate', 'no');
         callout.innerHTML = `
           <button class="mcb-proactive-close" aria-label="Dismiss">✕</button>
-          <span>${renderHtml(this.config.proactiveMessage)}</span>
+          <span class="mcb-proactive-text">${renderHtml(this.config.proactiveMessage)}</span>
         `;
         callout.querySelector('.mcb-proactive-close')?.addEventListener('click', (e) => {
           e.stopPropagation();
@@ -166,48 +180,37 @@ export class ChatWidgetController {
     this.elements.bubble.addEventListener('click', async () => {
       this.calloutEl?.remove();
       this.calloutEl = null;
-      const isOpen = this.elements.window.classList.toggle('open');
-      this.elements.bubble.classList.toggle('mcb-window-open', isOpen);
-      if (!isOpen) return;
-      this.clearUnread();
-
-      this.elements.window.addEventListener('keydown', this.trapFocus);
-      (this.elements.inputEl ?? this.elements.closeBtn).focus();
-
-      if (!this.opened) {
-        this.opened = true;
-        await this.loadConversation();
-      }
-      if (!this.greeted) {
-        WidgetDomRenderer.addMessage(this.elements.messagesEl, this.config.greeting, 'bot', this.config.icon, this.config.iconSvg);
-        this.greeted = true;
-        this.renderQuickReplies();
-        if (this.config.requireLogin && !this.visitorAuth.isAuthenticated && (this.config.freeQuestionsBeforeAuth ?? 0) === 0) {
-          WidgetDomRenderer.addAuthGatePrompt(this.elements.messagesEl, {
-            title: this.config.loginPromptTitle,
-            message: this.config.loginPromptMessage,
-            signupUrl: this.config.signupUrl,
-            loginUrl: this.config.loginUrl,
-            allowPublicSignup: this.config.allowPublicSignup !== false,
-            icon: this.config.icon,
-            iconSvg: this.config.iconSvg,
-          });
-        }
+      if (this.elements.window.classList.contains('open')) {
+        this.closeWindow();
+      } else {
+        await this.openWindow();
       }
     });
 
     this.elements.closeBtn.addEventListener('click', () => this.closeWindow());
-    this.elements.newChatBtn.addEventListener('click', () => this.elements.confirmOverlay.classList.add('open'));
+    this.elements.newChatBtn.addEventListener('click', () => {
+      this.closeMoreMenu();
+      this.elements.confirmOverlay.classList.add('open');
+    });
     this.elements.confirmCancelBtn.addEventListener('click', () => this.elements.confirmOverlay.classList.remove('open'));
     this.elements.confirmOkBtn.addEventListener('click', () => {
       this.elements.confirmOverlay.classList.remove('open');
       this.startNewChat();
     });
 
+    this.setupScrollToBottom();
+    this.setupSearch();
+    this.setupMoreMenu();
+
+    this.elements.expandBtn.addEventListener('click', () => this.toggleExpand());
+
     if (this.elements.inputEl && this.elements.sendBtn) {
       this.updateSendButtonState();
 
-      this.elements.inputEl.addEventListener('input', () => this.updateSendButtonState());
+      this.elements.inputEl.addEventListener('input', () => {
+        this.updateSendButtonState();
+        this.autoGrowInput();
+      });
       this.elements.inputEl.addEventListener('keyup', () => this.updateSendButtonState());
       this.elements.inputEl.addEventListener('change', () => this.updateSendButtonState());
 
@@ -218,8 +221,11 @@ export class ChatWidgetController {
           void this.handleSend();
         }
       });
+      // Enter sends (Shift+Enter inserts a new line) — the common chat-app convention. ArrowUp/Down
+      // at the very start/while already recalling still cycle through sent-message history.
       this.elements.inputEl.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
           if (!this.inFlightController && this.elements.inputEl?.value.trim()) {
             void this.handleSend();
           }
@@ -242,6 +248,8 @@ export class ChatWidgetController {
     if (this.elements.voiceTypeBtn) {
       this.elements.voiceTypeBtn.addEventListener('click', () => this.toggleVoiceTyping());
     }
+    this.elements.dictationStopBtn?.addEventListener('click', () => this.stopVoiceTyping());
+    this.elements.dictationCancelBtn?.addEventListener('click', () => this.cancelVoiceTyping());
 
     this.voice = new VoiceChat({
       getConfig: () => this.config,
@@ -278,15 +286,43 @@ export class ChatWidgetController {
           'aria-label',
           listening ? 'Stop Voice Typing' : 'Voice Typing (Dictation)',
         );
+        this.elements.dictationBar?.classList.toggle('open', listening);
+        if (!listening) this.resetDictationWave();
       },
+      (level) => this.updateDictationWave(level),
     );
     if (!started) {
       this.isVoiceTyping = false;
       this.elements.voiceTypeBtn?.classList.remove('is-listening');
+      this.elements.dictationBar?.classList.remove('open');
       WidgetDomRenderer.addErrorMessage(
         this.elements.messagesEl,
         'Voice typing is not supported in this browser or microphone permission was denied.',
       );
+    }
+  }
+
+  /** Scales each waveform bar by the live mic level (see WidgetAudioService.startDictationMeter) — bars
+   *  only move while audio is actually being picked up, and settle back to flat once it's quiet. */
+  private updateDictationWave(level: number): void {
+    if (!this.dictationWaveBars.length) {
+      this.dictationWaveBars = Array.from(this.elements.dictationBar?.querySelectorAll('span') ?? []);
+    }
+    const minHeight = 4;
+    const maxHeight = 20;
+    for (const bar of this.dictationWaveBars) {
+      const factor = parseFloat(bar.dataset.f || '1');
+      const scaled = Math.min(1, level * factor * 1.4);
+      const h = minHeight + scaled * (maxHeight - minHeight);
+      bar.style.height = `${h.toFixed(1)}px`;
+      bar.style.opacity = `${(0.55 + scaled * 0.45).toFixed(2)}`;
+    }
+  }
+
+  private resetDictationWave(): void {
+    for (const bar of this.dictationWaveBars) {
+      bar.style.height = '4px';
+      bar.style.opacity = '0.55';
     }
   }
 
@@ -295,6 +331,364 @@ export class ChatWidgetController {
     this.isVoiceTyping = false;
     this.elements.voiceTypeBtn?.classList.remove('is-listening');
     this.elements.voiceTypeBtn?.setAttribute('aria-label', 'Voice Typing (Dictation)');
+    this.resetDictationWave();
+    this.elements.dictationBar?.classList.remove('open');
+  }
+
+  /** Stops dictation and discards whatever was transcribed, restoring the text that was in the input before it started. */
+  private cancelVoiceTyping(): void {
+    if (this.elements.inputEl) {
+      this.elements.inputEl.value = this.voiceTypeInitialText.trim();
+      this.updateSendButtonState();
+    }
+    this.stopVoiceTyping();
+  }
+
+  /** Shows a small "jump to latest" arrow ~1s after the visitor scrolls away from the bottom of the chat. */
+  private setupScrollToBottom(): void {
+    const container = this.elements.messagesEl;
+    const btn = this.elements.scrollBottomBtn;
+
+    const isNearBottom = () => container.scrollHeight - container.scrollTop - container.clientHeight < 40;
+
+    container.addEventListener('scroll', () => {
+      if (isNearBottom()) {
+        if (this.scrollArrowTimer) {
+          clearTimeout(this.scrollArrowTimer);
+          this.scrollArrowTimer = null;
+        }
+        btn.classList.remove('visible');
+        return;
+      }
+      if (this.scrollArrowTimer) return;
+      this.scrollArrowTimer = setTimeout(() => {
+        this.scrollArrowTimer = null;
+        if (!isNearBottom()) btn.classList.add('visible');
+      }, 1000);
+    });
+
+    btn.addEventListener('click', () => {
+      container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
+      btn.classList.remove('visible');
+    });
+  }
+
+  private setupSearch(): void {
+    const { searchToggleBtn, searchBar, searchInput, searchCloseBtn, searchCount, searchPrevBtn, searchNextBtn } =
+      this.elements;
+
+    const closeSearch = () => {
+      searchBar.classList.remove('open');
+      searchInput.value = '';
+      this.clearSearchHighlights();
+      this.updateSearchCount();
+    };
+
+    const runSearch = () => {
+      const query = searchInput.value.trim();
+      this.highlightSearchMatches(query);
+      if (query && this.searchMatches.length > 0) {
+        this.goToSearchMatch(0);
+      } else {
+        this.updateSearchCount();
+      }
+    };
+
+    searchToggleBtn.addEventListener('click', () => {
+      this.closeMoreMenu();
+      const isOpen = searchBar.classList.contains('open');
+      if (isOpen) {
+        closeSearch();
+      } else {
+        searchBar.classList.add('open');
+        searchInput.focus();
+      }
+    });
+
+    searchCloseBtn.addEventListener('click', closeSearch);
+    searchNextBtn.addEventListener('click', () => this.goToSearchMatch(this.searchMatchIndex + 1));
+    searchPrevBtn.addEventListener('click', () => this.goToSearchMatch(this.searchMatchIndex - 1));
+    searchInput.addEventListener('input', runSearch);
+    searchInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closeSearch();
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (e.shiftKey) {
+          this.goToSearchMatch(this.searchMatchIndex - 1);
+        } else {
+          this.goToSearchMatch(this.searchMatchIndex + 1);
+        }
+      }
+    });
+  }
+
+  private clearSearchHighlights(): void {
+    this.elements.messagesEl.querySelectorAll('mark.mcb-search-highlight').forEach((mark) => {
+      const parent = mark.parentNode;
+      if (!parent) return;
+      parent.replaceChild(document.createTextNode(mark.textContent ?? ''), mark);
+      parent.normalize();
+    });
+    this.searchMatches = [];
+    this.searchMatchIndex = -1;
+  }
+
+  /** Wraps every case-insensitive occurrence of `query` in the rendered message text with a <mark>,
+   *  walking text nodes only so bot messages' markup (links, lists, etc.) is never disturbed. */
+  private highlightSearchMatches(query: string): void {
+    this.clearSearchHighlights();
+    if (!query) return;
+    const lowerQuery = query.toLowerCase();
+
+    const msgEls = Array.from(this.elements.messagesEl.querySelectorAll<HTMLElement>('.mcb-msg'));
+    for (const msgEl of msgEls) {
+      const walker = document.createTreeWalker(msgEl, NodeFilter.SHOW_TEXT, {
+        acceptNode: (node) =>
+          node.parentElement?.closest('.mcb-time') ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT,
+      });
+      const textNodes: Text[] = [];
+      let node: Node | null;
+      while ((node = walker.nextNode())) textNodes.push(node as Text);
+
+      for (const textNode of textNodes) {
+        const text = textNode.textContent ?? '';
+        const lowerText = text.toLowerCase();
+        if (!lowerText.includes(lowerQuery)) continue;
+
+        const frag = document.createDocumentFragment();
+        let cursor = 0;
+        let idx: number;
+        while ((idx = lowerText.indexOf(lowerQuery, cursor)) !== -1) {
+          if (idx > cursor) frag.appendChild(document.createTextNode(text.slice(cursor, idx)));
+          const mark = document.createElement('mark');
+          mark.className = 'mcb-search-highlight';
+          mark.textContent = text.slice(idx, idx + query.length);
+          frag.appendChild(mark);
+          this.searchMatches.push(mark);
+          cursor = idx + query.length;
+        }
+        if (cursor < text.length) frag.appendChild(document.createTextNode(text.slice(cursor)));
+        textNode.parentNode?.replaceChild(frag, textNode);
+      }
+    }
+  }
+
+  private goToSearchMatch(index: number): void {
+    if (this.searchMatches.length === 0) {
+      this.updateSearchCount();
+      return;
+    }
+    this.searchMatches[this.searchMatchIndex]?.classList.remove('current');
+    this.searchMatchIndex = ((index % this.searchMatches.length) + this.searchMatches.length) % this.searchMatches.length;
+    const mark = this.searchMatches[this.searchMatchIndex];
+    mark.classList.add('current');
+    mark.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    this.updateSearchCount();
+  }
+
+  private updateSearchCount(): void {
+    const { searchCount, searchInput, searchPrevBtn, searchNextBtn } = this.elements;
+    const hasQuery = searchInput.value.trim().length > 0;
+    const total = this.searchMatches.length;
+    searchCount.textContent = !hasQuery ? '' : total === 0 ? 'No matches' : `${this.searchMatchIndex + 1}/${total}`;
+    searchPrevBtn.disabled = total === 0;
+    searchNextBtn.disabled = total === 0;
+  }
+
+  private setupMoreMenu(): void {
+    const { moreWrapper, moreBtn, moreDropdown, downloadTranscriptBtn, soundToggleBtn, micToggleBtn, settingsToggleBtn, settingsSubmenu } =
+      this.elements;
+
+    moreBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isOpen = moreDropdown.classList.contains('open');
+      if (isOpen) {
+        this.closeMoreMenu();
+      } else {
+        this.updateExpandAvailability();
+        moreDropdown.classList.add('open');
+        moreBtn.classList.add('active');
+        moreBtn.setAttribute('aria-expanded', 'true');
+      }
+    });
+
+    document.addEventListener('click', (e) => {
+      // composedPath(), not e.target — the sound/mic toggle handlers replace their icon's
+      // innerHTML (to swap the on/off SVG), which detaches the original e.target from the DOM
+      // before this bubbles up here. A detached node reads as "not contained" by moreWrapper even
+      // though the click was genuinely inside it, which would otherwise close the menu that just
+      // handled the click. composedPath() is fixed at dispatch time, immune to that mutation.
+      if (!e.composedPath().includes(moreWrapper)) this.closeMoreMenu();
+    });
+
+    downloadTranscriptBtn.addEventListener('click', () => {
+      this.closeMoreMenu();
+      this.downloadTranscript();
+    });
+
+    settingsToggleBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isOpen = settingsSubmenu.classList.toggle('open');
+      settingsToggleBtn.setAttribute('aria-expanded', String(isOpen));
+    });
+
+    this.updateSoundToggleLabel();
+    soundToggleBtn.addEventListener('click', () => {
+      this.storageService.setSoundEnabled(!this.storageService.isSoundEnabled());
+      this.updateSoundToggleLabel();
+    });
+
+    this.updateMicToggleLabel();
+    this.applyMicVisibility();
+    micToggleBtn.addEventListener('click', () => {
+      this.storageService.setMicEnabled(!this.storageService.isMicEnabled());
+      this.updateMicToggleLabel();
+      this.applyMicVisibility();
+    });
+
+    window.addEventListener('resize', () => this.updateExpandAvailability());
+    this.updateExpandAvailability();
+  }
+
+  /** The window's base/expanded sizes are both clamped by max-width/max-height in widget.css
+   *  (see `.mcb-window` and `.mcb-window.expanded`) — on a short/narrow viewport (e.g. a browser
+   *  with devtools open) both clamp to the same rendered size, so expanding would do nothing
+   *  visible. Mirrors those same numbers to decide whether the menu item is worth offering. */
+  private updateExpandAvailability(): void {
+    if (this.elements.window.classList.contains('expanded')) {
+      this.elements.expandBtn.style.display = '';
+      return;
+    }
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const baseW = Math.min(410, vw - 32);
+    const baseH = Math.min(610, vh - 140);
+    const expandedW = Math.min(520, vw - 32);
+    const expandedH = Math.min(760, vh - 94);
+    const wouldHelp = expandedW - baseW > 4 || expandedH - baseH > 4;
+    this.elements.expandBtn.style.display = wouldHelp ? '' : 'none';
+  }
+
+  /** On mobile, the chat window fills the screen via `position:fixed; inset:0` (see the max-width:640px
+   *  block in widget.css). When the on-screen keyboard opens, mobile browsers shrink the *visual*
+   *  viewport but the *layout* viewport (what `100vh`/`100dvh`/`inset:0` are computed against) can lag
+   *  or stay the old size, and some browsers scroll the page to keep the focused field visible — both
+   *  push the fixed header off the top of the actually-visible area. Pin the window to the real visual
+   *  viewport instead so the header always stays put while typing. */
+  private setupMobileKeyboardFix(): void {
+    const vv = window.visualViewport;
+    if (!vv) return;
+
+    const isMobileLayout = () => window.innerWidth <= 640 && this.elements.window.classList.contains('open');
+
+    const apply = () => {
+      if (!isMobileLayout()) return;
+      this.elements.window.style.setProperty('height', `${vv.height}px`, 'important');
+      this.elements.window.style.setProperty('top', `${vv.offsetTop}px`, 'important');
+    };
+
+    const reset = () => {
+      this.elements.window.style.removeProperty('height');
+      this.elements.window.style.removeProperty('top');
+    };
+
+    vv.addEventListener('resize', apply);
+    vv.addEventListener('scroll', apply);
+    this.elements.inputEl?.addEventListener('focus', () => setTimeout(apply, 50));
+    this.elements.inputEl?.addEventListener('blur', () => {
+      if (window.innerWidth <= 640) reset();
+    });
+  }
+
+  private closeMoreMenu(): void {
+    this.elements.moreDropdown.classList.remove('open');
+    this.elements.moreBtn.classList.remove('active');
+    this.elements.moreBtn.setAttribute('aria-expanded', 'false');
+    this.elements.settingsSubmenu.classList.remove('open');
+    this.elements.settingsToggleBtn.setAttribute('aria-expanded', 'false');
+  }
+
+  private updateSoundToggleLabel(): void {
+    const enabled = this.storageService.isSoundEnabled();
+    const icon = this.elements.soundToggleBtn.querySelector('.mcb-sound-icon');
+    const label = this.elements.soundToggleBtn.querySelector('.mcb-sound-label');
+    const text = enabled ? 'Mute notifications' : 'Unmute notifications';
+    if (icon) icon.innerHTML = enabled ? VOLUME_SVG : VOLUME_MUTE_SVG;
+    if (label) label.textContent = text;
+    // Icon-only in the settings row (see widget.css) — title/aria-label carry the meaning instead.
+    this.elements.soundToggleBtn.setAttribute('title', text);
+    this.elements.soundToggleBtn.setAttribute('aria-label', text);
+    this.elements.soundToggleBtn.classList.toggle('mcb-settings-item-off', !enabled);
+  }
+
+  private playNotificationSound(kind: 'send' | 'reply'): void {
+    if (this.storageService.isSoundEnabled()) {
+      this.audioService.playNotificationSound(kind);
+    }
+  }
+
+  private updateMicToggleLabel(): void {
+    const enabled = this.storageService.isMicEnabled();
+    const icon = this.elements.micToggleBtn.querySelector('.mcb-mic-toggle-icon');
+    const label = this.elements.micToggleBtn.querySelector('.mcb-mic-toggle-label');
+    const text = enabled ? 'Hide mic icon' : 'Show mic icon';
+    if (icon) icon.innerHTML = enabled ? MIC_SVG : MIC_OFF_SVG;
+    if (label) label.textContent = text;
+    this.elements.micToggleBtn.setAttribute('title', text);
+    this.elements.micToggleBtn.setAttribute('aria-label', text);
+    this.elements.micToggleBtn.classList.toggle('mcb-settings-item-off', !enabled);
+  }
+
+  /** Hides the voice-typing mic button from the input row entirely when disabled via the menu —
+   *  not just visually: a disabled mic icon shouldn't still be clickable/reachable in the chat.
+   *  Uses setProperty(…, 'important') because .mcb-voice-type sets `display: flex !important`
+   *  in widget.css, which a plain inline `style.display` can never override. */
+  private applyMicVisibility(): void {
+    const btn = this.elements.voiceTypeBtn;
+    if (!btn) return;
+    if (this.storageService.isMicEnabled()) {
+      btn.style.removeProperty('display');
+    } else {
+      btn.style.setProperty('display', 'none', 'important');
+    }
+  }
+
+  private toggleExpand(): void {
+    this.closeMoreMenu();
+    const isExpanded = this.elements.window.classList.toggle('expanded');
+    const icon = this.elements.expandBtn.querySelector('.mcb-expand-icon');
+    const label = this.elements.expandBtn.querySelector('.mcb-expand-label');
+    if (icon) icon.innerHTML = isExpanded ? COLLAPSE_SVG : EXPAND_SVG;
+    if (label) label.textContent = isExpanded ? 'Collapse window' : 'Expand window';
+    this.elements.expandBtn.setAttribute('aria-label', isExpanded ? 'Collapse window' : 'Expand window');
+    this.elements.expandBtn.setAttribute('title', isExpanded ? 'Collapse window' : 'Expand window');
+  }
+
+  private downloadTranscript(): void {
+    const rows = Array.from(this.elements.messagesEl.querySelectorAll<HTMLDivElement>('.mcb-row'));
+    const lines = rows
+      .map((row) => {
+        const msgEl = row.querySelector('.mcb-msg');
+        if (!msgEl) return '';
+        const clone = msgEl.cloneNode(true) as HTMLElement;
+        clone.querySelector('.mcb-time')?.remove();
+        const text = clone.textContent?.trim() ?? '';
+        if (!text) return '';
+        const speaker = row.classList.contains('user') ? 'You' : this.config.title || 'Bot';
+        return `${speaker}: ${text}`;
+      })
+      .filter(Boolean);
+
+    const blob = new Blob([lines.join('\n\n')], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `chat-transcript-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
   }
 
   private recallPreviousMessage(): void {
@@ -328,18 +722,34 @@ export class ChatWidgetController {
 
   private updateSendButtonState(): void {
     if (!this.elements.sendBtn) return;
-    if (this.inFlightController) {
-      this.elements.sendBtn.innerHTML = STOP_SVG;
-      this.elements.sendBtn.setAttribute('aria-label', 'Stop');
-      this.elements.sendBtn.classList.add('is-stop');
+    const wantStop = Boolean(this.inFlightController);
+    // Only touch the button's DOM when the icon actually needs to change. This runs on every
+    // keystroke (and on blur/change, which fires mid-gesture when a real mouse click on this very
+    // button first blurs the textarea) — rewriting innerHTML every time destroys and recreates the
+    // SVG node the browser is tracking for click synthesis, silently swallowing the click.
+    if (wantStop !== this.elements.sendBtn.classList.contains('is-stop')) {
+      this.elements.sendBtn.innerHTML = wantStop ? STOP_SVG : SEND_SVG;
+      this.elements.sendBtn.setAttribute('aria-label', wantStop ? 'Stop' : 'Send');
+      this.elements.sendBtn.classList.toggle('is-stop', wantStop);
+    }
+    if (wantStop) {
       this.elements.sendBtn.disabled = false;
     } else {
-      this.elements.sendBtn.innerHTML = SEND_SVG;
-      this.elements.sendBtn.setAttribute('aria-label', 'Send');
-      this.elements.sendBtn.classList.remove('is-stop');
       const hasText = Boolean(this.elements.inputEl?.value.trim());
       this.elements.sendBtn.disabled = !hasText;
     }
+    this.autoGrowInput();
+  }
+
+  /** Grows the textarea with its content up to the ~3-line cap set by max-height in widget.css,
+   *  then lets it scroll internally. Covers every place the input's value changes programmatically
+   *  (history recall, dictation, quick replies, clearing after send) since they all funnel through
+   *  updateSendButtonState(). */
+  private autoGrowInput(): void {
+    const el = this.elements.inputEl;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight}px`;
   }
 
   private renderQuickReplies(): void {
@@ -462,11 +872,45 @@ export class ChatWidgetController {
     setUnreadBadge(this.elements.bubble, 0);
   }
 
+  /** Opens the chat window — shared by the bubble click and by auto-reopening on page load
+   *  (see `initialize()`) when the visitor left it open and navigated to another page via a link. */
+  private async openWindow(): Promise<void> {
+    this.elements.window.classList.add('open');
+    this.elements.bubble.classList.add('mcb-window-open');
+    this.storageService.setWidgetOpen(true);
+    this.clearUnread();
+
+    this.elements.window.addEventListener('keydown', this.trapFocus);
+    (this.elements.inputEl ?? this.elements.closeBtn).focus();
+
+    if (!this.opened) {
+      this.opened = true;
+      await this.loadConversation();
+    }
+    if (!this.greeted) {
+      WidgetDomRenderer.addMessage(this.elements.messagesEl, this.config.greeting, 'bot', this.config.icon, this.config.iconSvg);
+      this.greeted = true;
+      this.renderQuickReplies();
+      if (this.config.requireLogin && !this.visitorAuth.isAuthenticated && (this.config.freeQuestionsBeforeAuth ?? 0) === 0) {
+        WidgetDomRenderer.addAuthGatePrompt(this.elements.messagesEl, {
+          title: this.config.loginPromptTitle,
+          message: this.config.loginPromptMessage,
+          signupUrl: this.config.signupUrl,
+          loginUrl: this.config.loginUrl,
+          allowPublicSignup: this.config.allowPublicSignup !== false,
+          icon: this.config.icon,
+          iconSvg: this.config.iconSvg,
+        });
+      }
+    }
+  }
+
   private closeWindow(): void {
     this.elements.window.classList.remove('open');
     this.elements.bubble.classList.remove('mcb-window-open');
     this.elements.window.removeEventListener('keydown', this.trapFocus);
     this.elements.bubble.focus();
+    this.storageService.setWidgetOpen(false);
   }
 
   private async handleSend(): Promise<void> {
@@ -490,6 +934,7 @@ export class ChatWidgetController {
     this.historyIndex = -1;
 
     WidgetDomRenderer.addMessage(this.elements.messagesEl, text, 'user');
+    this.playNotificationSound('send');
     const typing = WidgetDomRenderer.createTypingRow('Typing…', this.config.icon, this.config.iconSvg);
     this.elements.messagesEl.appendChild(typing.row);
     this.elements.messagesEl.scrollTop = this.elements.messagesEl.scrollHeight;
@@ -501,6 +946,7 @@ export class ChatWidgetController {
       const { answer, source } = await this.apiService.sendMessage(this.sessionId, text, this.inFlightController.signal, bypassCache);
       typing.remove();
       WidgetDomRenderer.addMessage(this.elements.messagesEl, answer, 'bot', this.config.icon, this.config.iconSvg, source);
+      this.playNotificationSound('reply');
       this.markUnreadIfClosed();
     } catch (err: any) {
       typing.remove();

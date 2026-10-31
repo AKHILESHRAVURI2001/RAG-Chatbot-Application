@@ -1,3 +1,8 @@
+// `?inline` forces Vite to always embed these as base64 data URIs regardless of file size, so the
+// send/reply sounds ship inside the single dist/widget.js bundle — no separate file to host or CORS for.
+import sendSoundUrl from '../assets/send.wav?inline';
+import replySoundUrl from '../assets/reply.wav?inline';
+
 export interface AudioServiceCallbacks {
   onVolumeChange?: (level: number, isQuiet: boolean) => void;
   onSilenceAutoSubmit?: () => void;
@@ -272,10 +277,55 @@ export class WidgetAudioService {
   }
 
   private dictationRecognition: any = null;
+  private dictationMeterStream: MediaStream | null = null;
+  private dictationAudioContext: AudioContext | null = null;
+  private dictationAnalyser: AnalyserNode | null = null;
+  private dictationRafId = 0;
+
+  /** Measures real mic input level while dictating, so the UI can only animate when audio is actually coming in. */
+  private async startDictationMeter(onLevel: (level: number) => void): Promise<void> {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      this.dictationMeterStream = stream;
+      const AudioContextCtor = window.AudioContext || (window as any).webkitAudioContext;
+      this.dictationAudioContext = new AudioContextCtor();
+      const source = this.dictationAudioContext.createMediaStreamSource(stream);
+      this.dictationAnalyser = this.dictationAudioContext.createAnalyser();
+      this.dictationAnalyser.fftSize = 256;
+      source.connect(this.dictationAnalyser);
+      const data = new Uint8Array(this.dictationAnalyser.frequencyBinCount);
+
+      const loop = () => {
+        if (!this.dictationAnalyser) return;
+        this.dictationAnalyser.getByteTimeDomainData(data);
+        let sumSquares = 0;
+        for (let i = 0; i < data.length; i++) {
+          const v = (data[i] - 128) / 128;
+          sumSquares += v * v;
+        }
+        const level = Math.min(1, Math.sqrt(sumSquares / data.length) * 6);
+        onLevel(level);
+        this.dictationRafId = requestAnimationFrame(loop);
+      };
+      this.dictationRafId = requestAnimationFrame(loop);
+    } catch {
+      /* mic unavailable for metering — dictation still works via SpeechRecognition, UI just stays idle */
+    }
+  }
+
+  private stopDictationMeter(): void {
+    cancelAnimationFrame(this.dictationRafId);
+    this.dictationAnalyser = null;
+    this.dictationMeterStream?.getTracks().forEach((t) => t.stop());
+    this.dictationMeterStream = null;
+    this.dictationAudioContext?.close().catch(() => {});
+    this.dictationAudioContext = null;
+  }
 
   public startDictation(
     onTranscript: (text: string) => void,
     onStateChange?: (listening: boolean) => void,
+    onLevel?: (level: number) => void,
   ): boolean {
     const Ctor = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!Ctor) return false;
@@ -289,13 +339,18 @@ export class WidgetAudioService {
       recognition.interimResults = true;
       recognition.lang = navigator.language || 'en-US';
 
-      recognition.onstart = () => onStateChange?.(true);
+      recognition.onstart = () => {
+        onStateChange?.(true);
+        if (onLevel) void this.startDictationMeter(onLevel);
+      };
       recognition.onend = () => {
         this.dictationRecognition = null;
+        this.stopDictationMeter();
         onStateChange?.(false);
       };
       recognition.onerror = () => {
         this.dictationRecognition = null;
+        this.stopDictationMeter();
         onStateChange?.(false);
       };
 
@@ -334,6 +389,29 @@ export class WidgetAudioService {
         /* ignore */
       }
       this.dictationRecognition = null;
+    }
+    this.stopDictationMeter();
+  }
+
+  private sendSoundEl: HTMLAudioElement | null = null;
+  private replySoundEl: HTMLAudioElement | null = null;
+
+  /** Plays the bundled send/reply notification sound (see src/assets/). Lazily creates one
+   *  `Audio` element per sound and replays it from the start on every call, so rapid back-to-back
+   *  replies each get their own audible tick instead of being cut off by the previous one. */
+  public playNotificationSound(kind: 'send' | 'reply'): void {
+    try {
+      if (kind === 'send') {
+        if (!this.sendSoundEl) this.sendSoundEl = new Audio(sendSoundUrl);
+        this.sendSoundEl.currentTime = 0;
+        void this.sendSoundEl.play().catch(() => {});
+      } else {
+        if (!this.replySoundEl) this.replySoundEl = new Audio(replySoundUrl);
+        this.replySoundEl.currentTime = 0;
+        void this.replySoundEl.play().catch(() => {});
+      }
+    } catch {
+      /* a missed notification sound should never block the actual send/reply */
     }
   }
 
